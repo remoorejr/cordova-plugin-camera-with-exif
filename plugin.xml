@@ -4,7 +4,7 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:rim="http://www.blackberry.com/ns/widgets"
     id="com.alphasoftware.plugins.camera.withexif"
-    version="1.0.0">
+    version="1.0.1">
 
     <name>Camera With Exif: Alpha Software Edition</name>
     <description>
@@ -59,6 +59,7 @@
         <source-file src="src/android/CameraLauncher.java" target-dir="src/org/apache/cordova/camera" />
         <source-file src="src/android/FileHelper.java" target-dir="src/org/apache/cordova/camera" />
         <source-file src="src/android/ExifHelper.java" target-dir="src/org/apache/cordova/camera" />
+		<source-file src="src/android/gson-2.3.1.jar" target-dir="libs"
 
         <js-module src="www/CameraPopoverHandle.js" name="CameraPopoverHandle">
             <clobbers target="CameraPopoverHandle" />
