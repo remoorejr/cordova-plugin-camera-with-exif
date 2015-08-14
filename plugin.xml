@@ -4,7 +4,7 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:rim="http://www.blackberry.com/ns/widgets"
     id="com.alphasoftware.plugins.camera.withexif"
-    version="1.0.1">
+    version="1.0.2">
 
     <name>Camera With Exif: Alpha Software Edition</name>
     <description>
@@ -127,13 +127,14 @@
          <header-file src="src/ios/CDVJpegHeaderWriter.h" />
          <source-file src="src/ios/CDVJpegHeaderWriter.m" />
          <header-file src="src/ios/CDVExif.h" />
+		 <framework src="CoreImage.framework" />
          <framework src="ImageIO.framework" weak="true" />
          <framework src="CoreLocation.framework" />
          <framework src="CoreGraphics.framework" />
          <framework src="AssetsLibrary.framework" />
          <framework src="MobileCoreServices.framework" />
          <framework src="CoreGraphics.framework" />
-         <framework src="CoreImage.framework" />
+        
          
          <config-file target="*-Info.plist" parent="NSLocationWhenInUseUsageDescription">
              <string></string>
