@@ -4,7 +4,7 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:rim="http://www.blackberry.com/ns/widgets"
     id="com.alphasoftware.plugins.camera.withexif"
-    version="1.0.4">
+    version="1.0.5">
 
     <name>Camera With Exif: Alpha Software Edition</name>
     <description>
@@ -111,34 +111,35 @@
 
      <!-- ios -->
      <platform name="ios">
-         <config-file target="config.xml" parent="/*">
-             <feature name="Camera">
-                 <param name="ios-package" value="CDVCamera" />
-             </feature>
-             <preference name="CameraUsesGeolocation" value="true" />
-         </config-file>
+	         <config-file target="config.xml" parent="/*">
+	             <feature name="Camera">
+	                 <param name="ios-package" value="CDVCamera" />
+	             </feature>
+	             <preference name="CameraUsesGeolocation" value="true" />
+	         </config-file>
 
-         <js-module src="www/ios/CameraPopoverHandle.js" name="CameraPopoverHandle">
-            <clobbers target="CameraPopoverHandle" />
-         </js-module>
+	         <js-module src="www/ios/CameraPopoverHandle.js" name="CameraPopoverHandle">
+	            <clobbers target="CameraPopoverHandle" />
+	         </js-module>
 
-         <header-file src="src/ios/CDVCamera.h" />
-         <source-file src="src/ios/CDVCamera.m" />
-         <header-file src="src/ios/CDVJpegHeaderWriter.h" />
-         <source-file src="src/ios/CDVJpegHeaderWriter.m" />
-         <header-file src="src/ios/CDVExif.h" />
-         <framework src="CoreImage.framework" />
-         <framework src="ImageIO.framework" weak="true" />
-         <framework src="CoreLocation.framework" />
-         <framework src="CoreGraphics.framework" />
-         <framework src="AssetsLibrary.framework" />
-         <framework src="MobileCoreServices.framework" />
-         <framework src="CoreGraphics.framework" />
-        
-         
-         <config-file target="*-Info.plist" parent="NSLocationWhenInUseUsageDescription">
-             <string></string>
-         </config-file>
+	         <header-file src="src/ios/UIImage+CropScaleOrientation.h" />
+	         <source-file src="src/ios/UIImage+CropScaleOrientation.m" />
+	         <header-file src="src/ios/CDVCamera.h" />
+	         <source-file src="src/ios/CDVCamera.m" />
+	         <header-file src="src/ios/CDVJpegHeaderWriter.h" />
+	         <source-file src="src/ios/CDVJpegHeaderWriter.m" />
+	         <header-file src="src/ios/CDVExif.h" />
+	         <framework src="ImageIO.framework" weak="true" />
+	         <framework src="CoreLocation.framework" />
+	         <framework src="CoreGraphics.framework" />
+	         <framework src="AssetsLibrary.framework" />
+	         <framework src="MobileCoreServices.framework" />
+	         <framework src="CoreImage.framework" />
+	         <framework src="AVFoundation.framework" />
+
+	         <config-file target="*-Info.plist" parent="NSLocationWhenInUseUsageDescription">
+	             <string></string>
+	         </config-file>
                   
      </platform>
 
