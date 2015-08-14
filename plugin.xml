@@ -3,8 +3,8 @@
 <plugin xmlns="http://apache.org/cordova/ns/plugins/1.0"
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:rim="http://www.blackberry.com/ns/widgets"
-    id="cordova-plugin-camera-with-exif"
-    version="0.3.2">
+    id="com.alphasoftware.plugins.camera.withexif"
+    version="1.0.0">
 
     <name>Camera With Exif: Alpha Software Edition</name>
     <description>
