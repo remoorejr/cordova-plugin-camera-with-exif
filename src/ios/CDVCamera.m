@@ -19,6 +19,7 @@
  Includes mods by @remoorejr
  Fixed: Adding EXIF and GPS data to Image File acquired by camera
  24-Jul-2015
+ 
  */
 
 #import "CDVCamera.h"
