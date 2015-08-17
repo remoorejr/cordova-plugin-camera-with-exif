@@ -19,21 +19,23 @@
  Includes mods by @remoorejr
  Fixed: Adding EXIF and GPS data to Image File acquired by camera
  24-Jul-2015
- 
+
  */
 
 #import "CDVCamera.h"
 #import "CDVJpegHeaderWriter.h"
-#import <Cordova/NSArray+Comparisons.h>
-#import <Cordova/NSData+Base64.h>
-#import <Cordova/NSDictionary+Extensions.h>
+#import "UIImage+CropScaleOrientation.h"
 #import <ImageIO/CGImageProperties.h>
 #import <AssetsLibrary/ALAssetRepresentation.h>
-#import <AssetsLibrary/AssetsLibrary.h>
+#import <AssetsLibrary/AssetsLibrary.h> 
+#import <AVFoundation/AVFoundation.h>
+#import <Cordova/NSArray+Comparisons.h>
+#import <Cordova/NSDictionary+Extensions.h>
 #import <ImageIO/CGImageSource.h>
 #import <ImageIO/CGImageProperties.h>
 #import <ImageIO/CGImageDestination.h>
 #import <MobileCoreServices/UTCoreTypes.h>
+#import <objc/message.h>
 
 
 #ifndef __CORDOVA_4_0_0
