@@ -17,12 +17,18 @@
     under the License.
 -->
 
-# org.apache.cordova.camera
+# com.alphasoftware.plugins.camera.withexif
 
-This plugin provides an API for taking pictures and for choosing images from
-the system's image library.
+This plugin is an enhanced version of the stock cordova-plugin-camera which provides an API for taking pictures and for choosing images from
+the system's image library. 
 
-    cordova plugin add org.apache.cordova.camera
+It has been modified to extract EXIF and GPS data from all images returned from the either the camera or the image galleries on Android and iOS devices. The image file name and the image metadata (exif,gps) is returned as a JSON string, which needs to be parsed. 
+
+The Camera.Destination must be set to FILE_URI and the build must be for Android or iOS to in order for this plugin to work as described above. It will behave as the stock camera plugin in all other cases, returning the image only for all devices.
+
+This plugin is tightly integrated within the [Alpha Anywhere](http://www.alphasoftware.com) PhoneGap App Builder. Alpha Anywhere is a Rapid Mobile Application Development and Deployment platform.
+
+    cordova plugin add com.alphasoftware.plugins.camera.withexif
 
 
 ## navigator.camera.getPicture
@@ -91,6 +97,8 @@ than `DATA_URL`.
 
         <preference name="CameraUsesGeolocation" value="false" />
 
+Note: this preference is not required with this plugin. It is assumed that the only reason that you are using this plugin is to get geolocation and exif data. If present, this preference has no effect on this plugin.
+
 
 ### Amazon Fire OS Quirks
 
@@ -151,14 +159,37 @@ Take a photo and retrieve it as a base64-encoded image:
         alert('Failed because: ' + message);
     }
 
-Take a photo and retrieve the image's file location:
+Take a photo and retrieve the image's file location and image metadata (exif, geolocation):
+
+
+    // This iOS/Android only example requires the dialog and the device plugin as well.
 
     navigator.camera.getPicture(onSuccess, onFail, { quality: 50,
         destinationType: Camera.DestinationType.FILE_URI });
 
-    function onSuccess(imageURI) {
+    function onSuccess(result) {
+       // convert JSON string to JSON Object
+       var thisResult = JSON.parse(result);
+
+       // convert json_metadata JSON string to JSON Object 
+       var metadata = JSON.parse(thisResult.json_metadata);
+
         var image = document.getElementById('myImage');
-        image.src = imageURI;
+        image.src = thisResult.filename
+
+        if (thisResult.json_metadata != "{}") {
+            if (device.platform) == 'iOS') {
+
+              // notice the difference in the properties below and the format of the result when you run the app.
+              // iOS and Android return the exif and gps differently and I am not converting or accounting for the Lat/Lon reference.
+              // This is simply the raw data being returned.
+
+              navigator.notification.alert('Lat: '+metadata.GPS.Latitude+'\nLon: '+metadata.GPS.Longitude);
+            } else {
+               navigator.notification.alert('Lat: '+metadata.gpsLatitude+'\nLon: '+metadata.gpsLongitude);
+            }
+
+        }
     }
 
     function onFail(message) {
