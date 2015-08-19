@@ -1,5 +1,5 @@
 
-# com.alphasoftware.plugins.camera.withexif
+## com.alphasoftware.plugins.camera.withexif
 
 This plugin is an enhanced version of the stock cordova-plugin-camera which provides an API for taking pictures and for choosing images from
 the system's image library. 
