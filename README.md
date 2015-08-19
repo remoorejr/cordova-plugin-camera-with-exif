@@ -126,21 +126,6 @@ Tizen only supports a `destinationType` of
 
 ### Example
 
-Take a photo and retrieve it as a base64-encoded image:
-
-    navigator.camera.getPicture(onSuccess, onFail, { quality: 50,
-        destinationType: Camera.DestinationType.DATA_URL
-    });
-
-    function onSuccess(imageData) {
-        var image = document.getElementById('myImage');
-        image.src = "data:image/jpeg;base64," + imageData;
-    }
-
-    function onFail(message) {
-        alert('Failed because: ' + message);
-    }
-
 Take a photo and retrieve the image's file location and image metadata (exif, geolocation):
 
 
@@ -166,9 +151,9 @@ Take a photo and retrieve the image's file location and image metadata (exif, ge
               // iOS and Android return the exif and gps differently and I am not converting or accounting for the Lat/Lon reference.
               // This is simply the raw data being returned.
 
-              navigator.notification.alert('Lat: '+metadata.GPS.Latitude+'\nLon: '+metadata.GPS.Longitude);
+              navigator.notification.alert('Lat: '+metadata.GPS.Latitude+' Lon: '+metadata.GPS.Longitude);
             } else {
-               navigator.notification.alert('Lat: '+metadata.gpsLatitude+'\nLon: '+metadata.gpsLongitude);
+               navigator.notification.alert('Lat: '+metadata.gpsLatitude+' Lon: '+metadata.gpsLongitude);
             }
 
         }
