@@ -112,7 +112,7 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
 
     private class JsonResultObj {
         private String filename = "";
-        private String exif = "";
+        private String json_metadata = "";
         JsonResultObj() {
             //no-args constructor
         }
@@ -479,7 +479,7 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
 
             JsonResultObj resultObj = new JsonResultObj();
             resultObj.filename = uri.toString();
-            resultObj.exif = thisJson;
+            resultObj.json_metadata = thisJson;
 
             Gson thisGson = new Gson();
             String jsonResult = thisGson.toJson(resultObj);
@@ -639,7 +639,7 @@ private String ouputModifiedBitmap(Bitmap bitmap, Uri uri) throws IOException {
                 JsonResultObj resultObj = new JsonResultObj();
 
                 resultObj.filename = uri.toString();
-                resultObj.exif = thisJson;
+                resultObj.json_metadata = thisJson;
 
                 Gson thisGson = new Gson();
                 String jsonResult = thisGson.toJson(resultObj);
@@ -705,7 +705,7 @@ private String ouputModifiedBitmap(Bitmap bitmap, Uri uri) throws IOException {
                             JsonResultObj resultObj = new JsonResultObj();
                             resultObj.filename = thisFileURI;
                             // resultObj.filename = thisFile;
-                            resultObj.exif = thisJson;
+                            resultObj.json_metadata = thisJson;
 
                             Gson thisGson = new Gson();
                             String jsonResult = thisGson.toJson(resultObj);
@@ -721,7 +721,7 @@ private String ouputModifiedBitmap(Bitmap bitmap, Uri uri) throws IOException {
 
                         JsonResultObj resultObj = new JsonResultObj();
                         resultObj.filename = uri.toString();
-                        resultObj.exif = thisJson;
+                        resultObj.json_metadata = thisJson;
 
                         Gson thisGson = new Gson();
                         String jsonResult = thisGson.toJson(resultObj);
