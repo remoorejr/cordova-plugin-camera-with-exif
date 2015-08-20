@@ -10,7 +10,8 @@ The Camera.Destination must be set to FILE_URI and the build must be for Android
 
 This plugin is tightly integrated within the [Alpha Anywhere](http://www.alphasoftware.com) PhoneGap App Builder. Alpha Anywhere is a Rapid Mobile Application Development and Deployment platform.
 
-    PhoneGap Build plugin install, add to config.xml <gap:plugin name="com.alphasoftware.plugins.camera.withexif" version="1.0.14" />
+    PhoneGap Build plugin installation, add to config.xml:
+    <gap:plugin name="com.alphasoftware.plugins.camera.withexif" version="1.0.14" />
 
 
 ## navigator.camera.getPicture
