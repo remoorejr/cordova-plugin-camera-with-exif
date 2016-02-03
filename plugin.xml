@@ -4,7 +4,7 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:rim="http://www.blackberry.com/ns/widgets"
     id="cordova-plugin-camera-with-exif"
-    version="1.0.1">
+    version="1.0.3">
 
     <name>cordova-plugin-camera-with-exif</name>
     <description>
@@ -13,7 +13,7 @@
 
     <license>Apache 2.0</license>
 
-    <keywords>cordova,camera,exif,gps</keywords>
+    <keywords>cordova,camera,exif,gps,geotag</keywords>
     <repo>https://github.com/remoorejr/cordova-plugin-camera-with-exif.git</repo>
 
     <engines>
