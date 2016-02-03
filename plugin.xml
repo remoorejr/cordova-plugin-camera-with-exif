@@ -4,9 +4,9 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:rim="http://www.blackberry.com/ns/widgets"
     id="cordova-plugin-camera-with-exif"
-    version="1.0.0">
+    version="1.0.1">
 
-    <name>Camera With Exif: Alpha Software Edition</name>
+    <name>cordova-plugin-camera-with-exif</name>
     <description>
        Cordova Camera Plugin that will return an image as well as the EXIF data (including GPS location) on iOS and Android devices. 
     </description>
