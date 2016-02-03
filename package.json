@@ -1,0 +1,36 @@
+{
+  "name": "cordova-plugin-camera-with-exif",
+  "version": "1.0.0",
+  "description": "Cordova Camera Plugin that will return an image as well as the EXIF data (including GPS location) on iOS and Android devices.",
+  "cordova": {
+    "id": "cordova-plugin-camera-with-exif",
+    "platforms": [
+      "android",
+      "ios"
+    ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/remoorejr/cordova-plugin-camera-with-exif.git"
+  },
+  "keywords": [
+    "ecosystem:cordova",
+    "camera",
+    "exif",
+    "gps",
+    "cordova-android",
+    "cordova-ios"
+  ],
+  "engines": [
+    {
+      "name": "cordova",
+      "version": ">=3.0.0"
+    }
+  ],
+  "author": "@remoorejr",
+  "license": "Apache 2.0",
+  "bugs": {
+    "url": "https://github.com/remoorejr/cordova-plugin-camera-with-exif/issues"
+  },
+  "homepage": "https://github.com/remoorejr/cordova-plugin-camera-with-exif#readme"
+}
