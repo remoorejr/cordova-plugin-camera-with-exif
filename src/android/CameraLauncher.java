@@ -33,6 +33,7 @@ import java.util.Date;
 import org.apache.cordova.CallbackContext;
 import org.apache.cordova.CordovaPlugin;
 import org.apache.cordova.LOG;
+import org.apache.PermissionHelper;
 import org.apache.cordova.PluginResult;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -64,6 +65,10 @@ import android.provider.MediaStore;
 import android.util.Base64;
 import android.util.Log;
 import android.content.pm.PackageManager;
+import android.content.pm.PackageManager.NameNotFoundException;
+import android.content.pm.PermissionInfo;
+
+
 /**
  * This class launches the camera view, allows the user to take a picture, closes the camera view,
  * and returns the captured image.  When the camera view is closed, the screen displayed before
@@ -145,6 +150,7 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
             //no-args constructor
         }
     }
+    
     /**
      * Executes the request and returns PluginResult.
      *
@@ -787,9 +793,11 @@ private String ouputModifiedBitmap(Bitmap bitmap, Uri uri) throws IOException {
         // Get src and dest types from request code
         int srcType = (requestCode / 16) - 1;
         int destType = (requestCode % 16) - 1;
+
         // if camera crop
         if (requestCode == CROP_CAMERA) {
             if (resultCode == Activity.RESULT_OK) {
+
                 // // get the returned data
                 Bundle extras = intent.getExtras();
                 // get the cropped bitmap
@@ -1273,4 +1281,59 @@ private String ouputModifiedBitmap(Bitmap bitmap, Uri uri) throws IOException {
                 break;
         }
     }
+
+    /**
+     * Taking or choosing a picture launches another Activity, so we need to implement the
+     * save/restore APIs to handle the case where the CordovaActivity is killed by the OS
+     * before we get the launched Activity's result.
+     */
+    public Bundle onSaveInstanceState() {
+        Bundle state = new Bundle();
+        state.putInt("destType", this.destType);
+        state.putInt("srcType", this.srcType);
+        state.putInt("mQuality", this.mQuality);
+        state.putInt("targetWidth", this.targetWidth);
+        state.putInt("targetHeight", this.targetHeight);
+        state.putInt("encodingType", this.encodingType);
+        state.putInt("mediaType", this.mediaType);
+        state.putInt("numPics", this.numPics);
+        state.putBoolean("allowEdit", this.allowEdit);
+        state.putBoolean("correctOrientation", this.correctOrientation);
+        state.putBoolean("saveToPhotoAlbum", this.saveToPhotoAlbum);
+
+        if(this.croppedUri != null) {
+            state.putString("croppedUri", this.croppedUri.toString());
+        }
+
+        if(this.imageUri != null) {
+            state.putString("imageUri", this.imageUri.toString());
+        }
+
+        return state;
+    }
+
+    public void onRestoreStateForActivityResult(Bundle state, CallbackContext callbackContext) {
+        this.destType = state.getInt("destType");
+        this.srcType = state.getInt("srcType");
+        this.mQuality = state.getInt("mQuality");
+        this.targetWidth = state.getInt("targetWidth");
+        this.targetHeight = state.getInt("targetHeight");
+        this.encodingType = state.getInt("encodingType");
+        this.mediaType = state.getInt("mediaType");
+        this.numPics = state.getInt("numPics");
+        this.allowEdit = state.getBoolean("allowEdit");
+        this.correctOrientation = state.getBoolean("correctOrientation");
+        this.saveToPhotoAlbum = state.getBoolean("saveToPhotoAlbum");
+
+        if(state.containsKey("croppedUri")) {
+            this.croppedUri = Uri.parse(state.getString("croppedUri"));
+        }
+
+        if(state.containsKey("imageUri")) {
+            this.imageUri = Uri.parse(state.getString("imageUri"));
+        }
+
+        this.callbackContext = callbackContext;
+    }
+}
 }
