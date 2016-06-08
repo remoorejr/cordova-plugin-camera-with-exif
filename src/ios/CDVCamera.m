@@ -29,8 +29,6 @@
 #import <AssetsLibrary/ALAssetRepresentation.h>
 #import <AssetsLibrary/AssetsLibrary.h> 
 #import <AVFoundation/AVFoundation.h>
-#import <Cordova/NSArray+Comparisons.h>
-#import <Cordova/NSDictionary+Extensions.h>
 #import <ImageIO/CGImageSource.h>
 #import <ImageIO/CGImageProperties.h>
 #import <ImageIO/CGImageDestination.h>
@@ -39,6 +37,8 @@
 
 #ifndef __CORDOVA_4_0_0
     #import <Cordova/NSData+Base64.h>
+    #import <Cordova/NSArray+Comparisons.h>
+    #import <Cordova/NSDictionary+Extensions.h>
 #endif
 
 #define __REM_CoreImage__
