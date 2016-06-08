@@ -1,6 +1,6 @@
 {
   "name": "cordova-plugin-camera-with-exif",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "Cordova Camera Plugin that will return an image as well as the EXIF data (including GPS location) on iOS and Android devices.",
   "cordova": {
     "id": "cordova-plugin-camera-with-exif",

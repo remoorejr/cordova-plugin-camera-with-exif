@@ -287,8 +287,8 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
                 LOG.d(LOG_TAG, "Error: You don't have a default camera.  Your device may not be CTS complaint.");
             }
         }
-//        else
-//            LOG.d(LOG_TAG, "ERROR: You must use the CordovaInterface for this to work correctly. Please implement it in your activity");
+        // else
+        //   LOG.d(LOG_TAG, "ERROR: You must use the CordovaInterface for this to work correctly. Please implement it in your activity");
     }
 
     /**
@@ -615,7 +615,7 @@ private String ouputModifiedBitmap(Bitmap bitmap, Uri uri) throws IOException {
             }
         }
         return modifiedPath;
-    }
+}
 
 
 /**
@@ -1129,7 +1129,7 @@ private String ouputModifiedBitmap(Bitmap bitmap, Uri uri) throws IOException {
         } else {
             return srcHeight / dstHeight;
         }
-      }
+    }
 
     /**
      * Creates a cursor that can be used to determine how many images we have.
@@ -1336,4 +1336,4 @@ private String ouputModifiedBitmap(Bitmap bitmap, Uri uri) throws IOException {
         this.callbackContext = callbackContext;
     }
 }
-}
+
