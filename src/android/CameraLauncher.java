@@ -55,6 +55,7 @@ import android.graphics.Bitmap;
 import android.graphics.Bitmap.CompressFormat;
 import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
+import android.media.ExifInterface;
 import android.media.MediaScannerConnection;
 import android.media.MediaScannerConnection.MediaScannerConnectionClient;
 import android.net.Uri;
@@ -124,6 +125,13 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
     private Uri scanMe;                     // Uri of image to be added to content store
     private Uri croppedUri;
 
+    private class JsonResultObj {
+        private String filename = "";
+        private String json_metadata = "";
+        JsonResultObj() {
+            //no-args constructor
+        }
+    }
 
     /**
      * Executes the request and returns PluginResult.
@@ -474,6 +482,7 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
      */
     private void processResultFromCamera(int destType, Intent intent) throws IOException {
         int rotate = 0;
+         String thisJson = "";
 
         // Create an ExifHelper to save the exif data that is lost during compression
         ExifHelper exif = new ExifHelper();
