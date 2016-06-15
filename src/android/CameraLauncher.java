@@ -167,6 +167,7 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
             }
             if (this.targetHeight < 1) {
                 this.targetHeight = -1;
+            }
             
              // We don't return full-quality PNG files. The camera outputs a JPEG
             // so requesting it as a PNG provides no actual benefit
