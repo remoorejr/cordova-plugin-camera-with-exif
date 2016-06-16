@@ -36,7 +36,7 @@ import org.apache.cordova.CordovaResourceApi;
 import org.apache.cordova.LOG;
 import org.apache.cordova.PermissionHelper;
 import org.apache.cordova.PluginResult;
-import org.json.JSONArray
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
