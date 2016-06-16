@@ -36,7 +36,7 @@ import org.apache.cordova.CordovaResourceApi;
 import org.apache.cordova.LOG;
 import org.apache.cordova.PermissionHelper;
 import org.apache.cordova.PluginResult;
-import org.json.JSONArray;
+import org.json.JSONArray
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -482,7 +482,7 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
      */
     private void processResultFromCamera(int destType, Intent intent) throws IOException {
         int rotate = 0;
-         String thisJson = "";
+        String thisJson = "";
 
         // Create an ExifHelper to save the exif data that is lost during compression
         ExifHelper exif = new ExifHelper();
@@ -541,7 +541,7 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
 
             // Double-check the bitmap.
             if (bitmap == null) {
-                Log.d(LOG_TAG, "I either have a null image path or bitmap");
+                Log.d(LOG_TAG, "I either have a null image path or null bitmap");
                 this.failPicture("Unable to create bitmap!");
                 return;
             }
@@ -550,25 +550,22 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
                 bitmap = getRotatedBitmap(rotate, bitmap, exif);
             }
 
-            this.processPicture(bitmap, this.encodingType);
-
-            if (!this.saveToPhotoAlbum) {
+             if (!this.saveToPhotoAlbum) {
                 checkForDuplicateImage(DATA_URL);
             }
+
+            this.processPicture(bitmap, this.encodingType, thisJson);
         }
 
         // If sending filename back
         else if (destType == FILE_URI || destType == NATIVE_URI) {
-             // rem mods
+            
             // package up file name and exif as JSON
 
-
             JsonResultObj resultObj = new JsonResultObj();
-            // resultObj.filename = uri.toString();
             resultObj.json_metadata = thisJson;
 
             Gson thisGson = new Gson();
-            //String jsonResult = thisGson.toJson(resultObj);
             String jsonResult = "";
 
             // If all this is true we shouldn't compress the image.
@@ -591,6 +588,8 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
                     }
                     resultObj.filename = uri.toString();
                     jsonResult = thisGson.toJson(resultObj);
+
+                    // success callback
                     this.callbackContext.success(jsonResult);
                 }
             } else {
@@ -626,7 +625,8 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
                 }
                 resultObj.filename = uri.toString();
                 jsonResult = thisGson.toJson(resultObj);
-                 // Send Uri back to JavaScript for viewing image
+                
+                // success callback 
                 this.callbackContext.success(jsonResult);
             }
         } else {
@@ -711,7 +711,16 @@ private String ouputModifiedBitmap(Bitmap bitmap, Uri uri) throws IOException {
                 return;
             }
         }
+
         int rotate = 0;
+        String thisJson = "";
+        String jsonResult = "";
+        JsonResultObj resultObj = new JsonResultObj();
+
+        Gson thisGson = new GsonBuilder()
+                                .setExclusionStrategies(new JsonExclusionStrategy(ExifInterface.class))
+                                .serializeNulls()
+                                .create();
 
         String fileLocation = FileHelper.getRealPath(uri, this.cordova);
         Log.d(LOG_TAG, "File locaton is: " + fileLocation);
@@ -719,47 +728,53 @@ private String ouputModifiedBitmap(Bitmap bitmap, Uri uri) throws IOException {
         // If you ask for video or all media type you will automatically get back a file URI
         // and there will be no attempt to resize any returned data
         if (this.mediaType != PICTURE) {
-            this.callbackContext.success(fileLocation);
+
+            resultObj.filename = fileLocation;
+            resultObj.json_metadata = "{}";
+
+            jsonResult = thisGson.toJson(resultObj);
+            // success callback
+            this.callbackContext.success(jsonResult);
         }
         else {
+
+            // rem mods
+            // read exif data if URI is not remote
+            Uri exifUri = uri;
+
+            // required to support exifhelper
+            exifUri = Uri.fromFile(new File(FileHelper.getRealPath(uri, this.cordova)));
+            String thisFile = FileHelper.stripFileProtocol(exifUri.toString());
+
+            if (thisFile.length() > 7) {
+                ExifHelper exif = new ExifHelper();
+                try {
+                    exif.createInFile(thisFile);
+                    exif.readExifData();
+
+                    //Convert exif to JSON
+                    thisJson = thisGson.toJson(exif);
+
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+
+            } else {
+                thisJson = "{ \"error\": \"Unable to read exif data from remote URI\" }";
+            }
             // This is a special case to just return the path as no scaling,
             // rotating, nor compressing needs to be done
             if (this.targetHeight == -1 && this.targetWidth == -1 &&
                     (destType == FILE_URI || destType == NATIVE_URI) && !this.correctOrientation) {
-                this.callbackContext.success(uri.toString());
+                
+                resultObj.filename = uri.toString();
+                resultObj.json_metadata = thisJson;
+                
+                jsonResult = thisGson.toJson(resultObj);
+                // success callback
+                this.callbackContext.success(jsonResult);
+               
             } else {
-              
-                // rem mods
-                // read exif data if URI is not remote
-                Uri exifUri = uri;
-
-                // required to support exifhelper
-                exifUri = Uri.fromFile(new File(FileHelper.getRealPath(uri, this.cordova)));
-                String thisFile = FileHelper.stripFileProtocol(exifUri.toString());
-
-                String thisJson = "";
-
-                if (thisFile.length() > 7) {
-                    ExifHelper exif = new ExifHelper();
-
-                    try {
-
-                        exif.createInFile(thisFile);
-                        exif.readExifData();
-
-                        //Convert exif to JSON
-                        Gson gson = new GsonBuilder()
-                                .setExclusionStrategies(new JsonExclusionStrategy(ExifInterface.class))
-                                .serializeNulls()
-                                .create();
-                        thisJson = gson.toJson(exif);
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-
-                } else {
-                        thisJson = "{ \"error\": \"Unable to read exif data from remote URI\" }";
-                }
 
                 String uriString = uri.toString();
 
@@ -799,7 +814,7 @@ private String ouputModifiedBitmap(Bitmap bitmap, Uri uri) throws IOException {
 
                 // If sending base64 image back
                 if (destType == DATA_URL) {
-                    this.processPicture(bitmap, this.encodingType);
+                    this.processPicture(bitmap, this.encodingType, thisJson);
                 }
 
                 // If sending filename back
@@ -811,6 +826,8 @@ private String ouputModifiedBitmap(Bitmap bitmap, Uri uri) throws IOException {
                             String modifiedPath = this.ouputModifiedBitmap(bitmap, uri);
                             // The modified image is cached by the app in order to get around this and not have to delete you
                             // application cache I'm adding the current system time to the end of the file url.
+
+
                             this.callbackContext.success("file://" + modifiedPath + "?" + System.currentTimeMillis());
 
                         } catch (Exception e) {
@@ -820,12 +837,11 @@ private String ouputModifiedBitmap(Bitmap bitmap, Uri uri) throws IOException {
                     }
                     else {
 
-                        JsonResultObj resultObj = new JsonResultObj();
                         resultObj.filename = fileLocation;
                         resultObj.json_metadata = thisJson;
 
-                        Gson thisGson = new Gson();
-                        String jsonResult = thisGson.toJson(resultObj);
+                        jsonResult = thisGson.toJson(resultObj);
+                        // success callback
                         this.callbackContext.success(jsonResult);
                     }
                 }
@@ -1261,8 +1277,10 @@ private String ouputModifiedBitmap(Bitmap bitmap, Uri uri) throws IOException {
      * Compress bitmap using jpeg, convert to Base64 encoded string, and return to JavaScript.
      *
      * @param bitmap
+     * @param encodingType
+     * @param exifJson
      */
-    public void processPicture(Bitmap bitmap, int encodingType) {
+    public void processPicture(Bitmap bitmap, int encodingType, String exifJson) {
         ByteArrayOutputStream jpeg_data = new ByteArrayOutputStream();
         CompressFormat compressFormat = encodingType == JPEG ?
                 CompressFormat.JPEG :
@@ -1273,7 +1291,23 @@ private String ouputModifiedBitmap(Bitmap bitmap, Uri uri) throws IOException {
                 byte[] code = jpeg_data.toByteArray();
                 byte[] output = Base64.encode(code, Base64.NO_WRAP);
                 String js_out = new String(output);
-                this.callbackContext.success(js_out);
+                JsonResultObj resultObj = new JsonResultObj();
+
+                Gson thisGson = new GsonBuilder()
+                                .setExclusionStrategies(new JsonExclusionStrategy(ExifInterface.class))
+                                .serializeNulls()
+                                .create();
+                String thisJson = exifJson;
+                
+                // we're not sending back the filenname here, it's the Base64 image data.
+                // might want to change the property name here to be clear about payload
+                resultObj.filename = js_out;
+                resultObj.json_metadata = thisJson;
+
+                String jsonResult = thisGson.toJson(resultObj);
+                // success callback
+                this.callbackContext.success(jsonResult);
+
                 js_out = null;
                 output = null;
                 code = null;
