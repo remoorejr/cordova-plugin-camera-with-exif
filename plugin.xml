@@ -4,7 +4,7 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:rim="http://www.blackberry.com/ns/widgets"
     id="cordova-plugin-camera-with-exif"
-    version="1.1.3">
+    version="1.1.4">
 
     <name>cordova-plugin-camera-with-exif</name>
     <description>
@@ -143,6 +143,16 @@
 	         <config-file target="*-Info.plist" parent="NSLocationWhenInUseUsageDescription">
 	             <string></string>
 	         </config-file>
+
+            <preference name="CAMERA_USAGE_DESCRIPTION" default=" " />
+            <config-file target="*-Info.plist" parent="NSCameraUsageDescription">
+                <string>$CAMERA_USAGE_DESCRIPTION</string>
+            </config-file>
+
+            <preference name="PHOTOLIBRARY_USAGE_DESCRIPTION" default=" " />
+            <config-file target="*-Info.plist" parent="NSPhotoLibraryUsageDescription">
+                <string>$PHOTOLIBRARY_USAGE_DESCRIPTION</string>
+            </config-file>
                   
      </platform>
 

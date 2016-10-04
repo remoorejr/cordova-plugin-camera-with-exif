@@ -80,11 +80,14 @@ than `DATA_URL`.
 
 ### Preferences (iOS)
 
--  __CameraUsesGeolocation__ (boolean, defaults to false). For capturing JPEGs, set to true to get geolocation data in the EXIF header. This will trigger a request for geolocation permissions if set to true.
+-  __CameraUsesGeolocation__ (boolean, defaults to true). For capturing JPEGs, set to true to get geolocation data in the EXIF header. This will trigger a request for geolocation permissions if set to true.
 
         <preference name="CameraUsesGeolocation" value="false" />
 
 Note: this preference is not required with this plugin. It is assumed that the only reason that you are using this plugin is to get geolocation and exif data. If present, this preference has no effect on this plugin.
+
+
+
 
 
 ### Amazon Fire OS Quirks
@@ -108,6 +111,28 @@ Can only return photos as base64-encoded image.
 Camera plugin is currently implemented using [Web Activities](https://hacks.mozilla.org/2013/01/introducing-web-activities/). 
 
 ### iOS Quirks
+
+With the release of iOS 10 it became mandatory to add a `NSCameraUsageDescription` and `NSPhotoLibraryUsageDescriptionentry` in the info.plist.
+
+- `NSCameraUsageDescription` describes the reason that the app accesses the user’s camera.
+- `NSPhotoLibraryUsageDescriptionentry` describes the reason the app accesses the user's photo library.
+
+When the system prompts the user to allow access, this string is displayed as part of the dialog box.
+
+To add this entry you can pass the following variables on plugin install.
+
+- `CAMERA_USAGE_DESCRIPTION` for `NSCameraUsageDescription`
+- `PHOTOLIBRARY_USAGE_DESCRIPTION` for `NSPhotoLibraryUsageDescriptionentry`
+
+### Example
+
+    
+    cordova plugin add cordova-plugin-camera-with-exif --variable CAMERA_USAGE_DESCRIPTION="your usage message"
+
+
+If you don't pass the variable, the plugin will add an empty string as value.
+
+---
 
 Including a JavaScript `alert()` in either of the callback functions
 can cause problems.  Wrap the alert within a `setTimeout()` to allow
