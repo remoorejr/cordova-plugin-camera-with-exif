@@ -49,6 +49,7 @@ import android.Manifest;
 import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.content.ContentValues;
+import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
 import android.graphics.Bitmap;
@@ -379,7 +380,7 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
                     intent.putExtra("aspectX", 1);
                     intent.putExtra("aspectY", 1);
                 }
-                File photo = createCaptureFile(encodingType);
+                File photo = createCaptureFile(JPEG);
                 croppedUri = Uri.fromFile(photo);
                 intent.putExtra(android.provider.MediaStore.EXTRA_OUTPUT, croppedUri);
             } else {
@@ -654,15 +655,29 @@ private void refreshGallery(Uri contentUri)
     this.cordova.getActivity().sendBroadcast(mediaScanIntent);
 }
 
+/*
+ * Converts output image format int value to string value of mime type.
+ * @param outputFormat int Output format of camera API.
+ *                     Must be value of either JPEG or PNG constant
+ * @return String String value of mime type or empty string if mime type is not supported
+ */
+
+
+private String getMimetypeForFormat(int outputFormat) {
+    if (outputFormat == PNG) return "image/png";
+    if (outputFormat == JPEG) return "image/jpeg";
+    return "";
+}
 
 private String ouputModifiedBitmap(Bitmap bitmap, Uri uri) throws IOException {
         // Some content: URIs do not map to file paths (e.g. picasa).
         String realPath = FileHelper.getRealPath(uri, this.cordova);
 
         // Get filename from uri
-        String fileName = realPath != null ?
-            realPath.substring(realPath.lastIndexOf('/') + 1) :
-            "modified." + (this.encodingType == JPEG ? "jpg" : "png");
+        String fileName = realPath != null ? realPath.substring(realPath.lastIndexOf('/') + 1, realPath.lastIndexOf(".") + 1) : "modified.";
+
+        // Append filename extension based on output encoding type
+        fileName += (this.encodingType == JPEG ? "jpg" : "png");
 
         String modifiedPath = getTempDirectoryPath() + "/" + fileName;
 
@@ -701,141 +716,153 @@ private String ouputModifiedBitmap(Bitmap bitmap, Uri uri) throws IOException {
      * @param destType          In which form should we return the image
      * @param intent            An Intent, which can return result data to the caller (various data can be attached to Intent "extras").
      */
-    private void processResultFromGallery(int destType, Intent intent) {
-        Uri uri = intent.getData();
-        if (uri == null) {
-            if (croppedUri != null) {
-                uri = croppedUri;
-            } else {
-                this.failPicture("null data from photo library");
-                return;
-            }
+
+private void processResultFromGallery(int destType, Intent intent) {
+    Uri uri = intent.getData();
+    if (uri == null) {
+        if (croppedUri != null) {
+            uri = croppedUri;
+        } else {
+            this.failPicture("null data from photo library");
+            return;
         }
+    }
 
-        int rotate = 0;
-        String thisJson = "";
-        String jsonResult = "";
-        JsonResultObj resultObj = new JsonResultObj();
+    int rotate = 0;
+    String thisJson = "";
+    String jsonResult = "";
+    String jsonError = "{ \"error\": \"Unable to read exif data from remote URI\" }";
+    JsonResultObj resultObj = new JsonResultObj();
 
-        Gson thisGson = new GsonBuilder()
-                                .setExclusionStrategies(new JsonExclusionStrategy(ExifInterface.class))
-                                .serializeNulls()
-                                .create();
+    Gson thisGson = new GsonBuilder()
+            .setExclusionStrategies(new JsonExclusionStrategy(ExifInterface.class))
+            .serializeNulls()
+            .create();
 
-        String fileLocation = FileHelper.getRealPath(uri, this.cordova);
-        Log.d(LOG_TAG, "File locaton is: " + fileLocation);
+    String fileLocation = FileHelper.getRealPath(uri, this.cordova);
+    Log.d(LOG_TAG, "File locaton is: " + fileLocation);
 
-        // If you ask for video or all media type you will automatically get back a file URI
-        // and there will be no attempt to resize any returned data
-        if (this.mediaType != PICTURE) {
+    // If you ask for video or all media type you will automatically get back a file URI
+    // and there will be no attempt to resize any returned data
+    if (this.mediaType != PICTURE) {
 
-            resultObj.filename = fileLocation;
-            resultObj.json_metadata = "{}";
+        resultObj.filename = fileLocation;
+        resultObj.json_metadata = "{}";
+
+        jsonResult = thisGson.toJson(resultObj);
+        // success callback
+        this.callbackContext.success(jsonResult);
+    }
+    else {
+
+        // rem mods
+        // read exif data if URI is not remote
+        Uri exifUri = uri;
+
+        // required to support exifhelper
+        exifUri = Uri.fromFile(new File(FileHelper.getRealPath(uri, this.cordova)));
+        String thisFile = FileHelper.stripFileProtocol(exifUri.toString());
+
+
+        // thisFile will be a null string or '/' if the file is remote
+        // I'm unable to extract exif data from remote files, although I try!
+
+        if (thisFile.length() > 7) {
+            ExifHelper exif = new ExifHelper();
+            try {
+                exif.createInFile(thisFile);
+                exif.readExifData();
+
+                // get orientation
+                rotate = exif.getOrientation();
+
+                //Convert exif to JSON
+                thisJson = thisGson.toJson(exif);
+
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+        } else {
+            thisJson = jsonError;
+        }
+        // This is a special case to just return the path as no scaling,
+        // rotating, nor compressing needs to be done
+        if (this.targetHeight == -1 && this.targetWidth == -1 &&
+                (destType == FILE_URI || destType == NATIVE_URI) && !this.correctOrientation) {
+
+            resultObj.filename = uri.toString();
+            resultObj.json_metadata = thisJson;
 
             jsonResult = thisGson.toJson(resultObj);
             // success callback
             this.callbackContext.success(jsonResult);
-        }
-        else {
 
-            // rem mods
-            // read exif data if URI is not remote
-            Uri exifUri = uri;
+        } else {
 
-            // required to support exifhelper
-            exifUri = Uri.fromFile(new File(FileHelper.getRealPath(uri, this.cordova)));
-            String thisFile = FileHelper.stripFileProtocol(exifUri.toString());
+            String uriString = uri.toString();
 
-            if (thisFile.length() > 7) {
-                ExifHelper exif = new ExifHelper();
-                try {
-                    exif.createInFile(thisFile);
-                    exif.readExifData();
-
-                    //Convert exif to JSON
-                    thisJson = thisGson.toJson(exif);
-
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-
-            } else {
-                thisJson = "{ \"error\": \"Unable to read exif data from remote URI\" }";
+            // Get the path to the image. Makes loading so much easier.
+            String mimeType = FileHelper.getMimeType(uriString, this.cordova);
+            // If we don't have a valid image so quit.
+            if (!("image/jpeg".equalsIgnoreCase(mimeType) || "image/png".equalsIgnoreCase(mimeType))) {
+                Log.d(LOG_TAG, "I either have a null image path or bitmap");
+                this.failPicture("Unable to retrieve path to picture!");
+                return;
             }
-            // This is a special case to just return the path as no scaling,
-            // rotating, nor compressing needs to be done
-            if (this.targetHeight == -1 && this.targetWidth == -1 &&
-                    (destType == FILE_URI || destType == NATIVE_URI) && !this.correctOrientation) {
-                
-                resultObj.filename = uri.toString();
-                resultObj.json_metadata = thisJson;
-                
-                jsonResult = thisGson.toJson(resultObj);
-                // success callback
-                this.callbackContext.success(jsonResult);
-               
-            } else {
+            Bitmap bitmap = null;
 
-                String uriString = uri.toString();
+            try {
+                bitmap = getScaledBitmap(uriString);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            if (bitmap == null) {
+                Log.d(LOG_TAG, "I either have a null image path or bitmap");
+                this.failPicture("Unable to create bitmap!");
+                return;
+            }
 
-                // Get the path to the image. Makes loading so much easier.
-                String mimeType = FileHelper.getMimeType(uriString, this.cordova);
-                // If we don't have a valid image so quit.
-                if (!("image/jpeg".equalsIgnoreCase(mimeType) || "image/png".equalsIgnoreCase(mimeType))) {
-                    Log.d(LOG_TAG, "I either have a null image path or bitmap");
-                    this.failPicture("Unable to retrieve path to picture!");
-                    return;
-                }
-                Bitmap bitmap = null;
-                try {
-                    bitmap = getScaledBitmap(uriString);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-                if (bitmap == null) {
-                    Log.d(LOG_TAG, "I either have a null image path or bitmap");
-                    this.failPicture("Unable to create bitmap!");
-                    return;
-                }
+            if (this.correctOrientation) {
 
-                if (this.correctOrientation) {
+                if (rotate == 0) {
                     rotate = getImageOrientation(uri);
-                    if (rotate != 0) {
-                        Matrix matrix = new Matrix();
-                        matrix.setRotate(rotate);
-                        try {
-                            bitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, true);
-                            this.orientationCorrected = true;
-                        } catch (OutOfMemoryError oom) {
-                            this.orientationCorrected = false;
-                        }
+                };
+
+                if (rotate != 0) {
+                    Matrix matrix = new Matrix();
+                    matrix.setRotate(rotate);
+                    try {
+                        bitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, true);
+                        this.orientationCorrected = true;
+                    } catch (OutOfMemoryError oom) {
+                        this.orientationCorrected = false;
                     }
                 }
+            }
 
-                // If sending base64 image back
-                if (destType == DATA_URL) {
-                    this.processPicture(bitmap, this.encodingType, thisJson);
-                }
+            // If sending base64 image back
+            if (destType == DATA_URL) {
+                this.processPicture(bitmap, this.encodingType, thisJson);
+            }
 
-                // If sending filename back
-                else if (destType == FILE_URI || destType == NATIVE_URI) {
-                    // Did we modify the image?
-                    if ( (this.targetHeight > 0 && this.targetWidth > 0) ||
-                            (this.correctOrientation && this.orientationCorrected) ) {
-                        try {
-                            String modifiedPath = this.ouputModifiedBitmap(bitmap, uri);
-                            // The modified image is cached by the app in order to get around this and not have to delete you
-                            // application cache I'm adding the current system time to the end of the file url.
+            // If sending filename back
+            else if (destType == FILE_URI || destType == NATIVE_URI) {
+                // Did we modify the image?
+                if ( (this.targetHeight > 0 && this.targetWidth > 0) ||
+                        (this.correctOrientation && this.orientationCorrected) ) {
+                    try {
+                        String modifiedPath = this.ouputModifiedBitmap(bitmap, uri);
 
+                        // The modified image is cached by the app in order to get around this and not have to delete you
+                        // application cache I'm adding the current system time to the end of the file url.
 
-                            this.callbackContext.success("file://" + modifiedPath + "?" + System.currentTimeMillis());
+                        fileLocation = "file://" + modifiedPath + "?" + System.currentTimeMillis();
 
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                            this.failPicture("Error retrieving image.");
-                        }
-                    }
-                    else {
+                        // Note: For external files, content://, exif data will be missing, limitation of android.media.ExifInterface, can't handle streams
+                        // Need to use another library and can't use content:// URI's
+                        // You don't find file paths from content URI's
+                        // See: http://stackoverflow.com/questions/34696787/a-final-answer-on-how-to-get-exif-data-from-uri
 
                         resultObj.filename = fileLocation;
                         resultObj.json_metadata = thisJson;
@@ -843,16 +870,32 @@ private String ouputModifiedBitmap(Bitmap bitmap, Uri uri) throws IOException {
                         jsonResult = thisGson.toJson(resultObj);
                         // success callback
                         this.callbackContext.success(jsonResult);
+
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        this.failPicture("Error retrieving image.");
                     }
                 }
-                if (bitmap != null) {
-                    bitmap.recycle();
-                    bitmap = null;
+                else {
+
+                    resultObj.filename = fileLocation;
+                    resultObj.json_metadata = thisJson;
+
+                    jsonResult = thisGson.toJson(resultObj);
+                    // success callback
+                    this.callbackContext.success(jsonResult);
                 }
-                System.gc();
             }
+            if (bitmap != null) {
+                bitmap.recycle();
+                bitmap = null;
+            }
+            System.gc();
         }
     }
+}
+
+
 
     /**
      * Called when the camera view exits.
@@ -940,6 +983,8 @@ private String ouputModifiedBitmap(Bitmap bitmap, Uri uri) throws IOException {
             }
         }
     }
+
+
 
     private int getImageOrientation(Uri uri) {
         int rotate = 0;
