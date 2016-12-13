@@ -4,7 +4,7 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:rim="http://www.blackberry.com/ns/widgets"
     id="cordova-plugin-camera-with-exif"
-    version="1.1.5">
+    version="1.1.6">
 
     <name>cordova-plugin-camera-with-exif</name>
     <description>
@@ -144,12 +144,12 @@
 	             <string></string>
 	         </config-file>
 
-            <preference name="CAMERA_USAGE_DESCRIPTION" default=" " />
+            <preference name="CAMERA_USAGE_DESCRIPTION" default="This app requires access to the camera to take pictures." />
             <config-file target="*-Info.plist" parent="NSCameraUsageDescription">
                 <string>$CAMERA_USAGE_DESCRIPTION</string>
             </config-file>
 
-            <preference name="PHOTOLIBRARY_USAGE_DESCRIPTION" default=" " />
+            <preference name="PHOTOLIBRARY_USAGE_DESCRIPTION" default="This app requires access to the photo library to display pictures." />
             <config-file target="*-Info.plist" parent="NSPhotoLibraryUsageDescription">
                 <string>$PHOTOLIBRARY_USAGE_DESCRIPTION</string>
             </config-file>

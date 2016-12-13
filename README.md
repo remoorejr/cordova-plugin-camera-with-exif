@@ -130,7 +130,11 @@ To add this entry you can pass the following variables on plugin install.
     cordova plugin add cordova-plugin-camera-with-exif --variable CAMERA_USAGE_DESCRIPTION="your usage message"
 
 
-If you don't pass the variable, the plugin will add an empty string as value.
+If you don't pass the variable, the plugin will add the following  text as the value.
+
+- `CAMERA_USAGE_DESCRIPTION` = This app requires access to the camera to take pictures.
+- `PHOTOLIBRARY_USAGE_DESCRIPTION` = This app requires access to the photo library to display pictures.
+
 
 ---
 
