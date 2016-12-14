@@ -119,18 +119,18 @@ With the release of iOS 10 it became mandatory to add a `NSCameraUsageDescriptio
 
 When the system prompts the user to allow access, this string is displayed as part of the dialog box.
 
-To add this entry you can pass the following variables on plugin install.
-
-- `CAMERA_USAGE_DESCRIPTION` for `NSCameraUsageDescription`
-- `PHOTOLIBRARY_USAGE_DESCRIPTION` for `NSPhotoLibraryUsageDescriptionentry`
-
-### Example
-
-    
-    cordova plugin add cordova-plugin-camera-with-exif --variable CAMERA_USAGE_DESCRIPTION="your usage message"
+These strings have been hard coded in the plugin.xml file as follows:
 
 
-If you don't pass the variable, the plugin will add an empty string.
+<config-file target="*-Info.plist" parent="NSCameraUsageDescription">
+    <string>This app requires access to the camera to take photos.</string>
+</config-file>
+
+<config-file target="*-Info.plist" parent="NSPhotoLibraryUsageDescription">
+    <string>This app requires access to the photo library to display images.</string>
+</config-file>
+
+This allows the plugin to work with the PhoneGap CLI as well as PhoneGap Build.
 
 ---
 
