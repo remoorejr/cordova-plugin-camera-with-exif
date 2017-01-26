@@ -112,25 +112,23 @@ Camera plugin is currently implemented using [Web Activities](https://hacks.mozi
 
 ### iOS Quirks
 
-With the release of iOS 10 it became mandatory to add a `NSCameraUsageDescription` and `NSPhotoLibraryUsageDescriptionentry` in the info.plist.
+With the release of iOS 10 it became mandatory to add a `NSCameraUsageDescription` and `NSPhotoLibraryUsageDescription` in the info.plist.
 
-- `NSCameraUsageDescription` describes the reason that the app accesses the user’s camera.
-- `NSPhotoLibraryUsageDescriptionentry` describes the reason the app accesses the user's photo library.
+- `NSCameraUsageDescription` describes the reason the app requires access to the camera.
+- `NSPhotoLibraryUsageDescription` describes the reason the app requires access to the photo library.
+- `NSLocationWhenInUseUsageDescription` describes the reason the app requires access to the devices location. 
 
 When the system prompts the user to allow access, this string is displayed as part of the dialog box.
 
-To add this entry you can pass the following variables on plugin install.
-
-- `CAMERA_USAGE_DESCRIPTION` for `NSCameraUsageDescription`
-- `PHOTOLIBRARY_USAGE_DESCRIPTION` for `NSPhotoLibraryUsageDescriptionentry`
-
-### Example
-
-    
-    cordova plugin add cordova-plugin-camera-with-exif --variable CAMERA_USAGE_DESCRIPTION="your usage message"
+These strings have been hard coded in the plugin.xml file as follows:
 
 
-If you don't pass the variable, the plugin will add an empty string as value.
+- `NSCameraUsageDescription:` This app requires access to the camera to take photos.
+- `NSPhotoLibraryUsageDescription:` This app requires access to the photo library to display images.
+- `NSLocationWhenInUseUsageDescription:` This app requires access to your location when in use to include location info in photo metadata.
+            
+
+This allows the plugin to work with the PhoneGap CLI as well as PhoneGap Build.
 
 ---
 
