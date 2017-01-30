@@ -4,7 +4,7 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:rim="http://www.blackberry.com/ns/widgets"
     id="cordova-plugin-camera-with-exif"
-    version="1.2.0">
+    version="1.2.1">
 
     <name>cordova-plugin-camera-with-exif</name>
     <description>
@@ -20,7 +20,7 @@
        <engine name="cordova" version="&gt;=3.0.0" />
     </engines>
 
-     <dependency id="cordova-plugin-compat" version="^1.0.0" />
+     <dependency id="cordova-plugin-compat" version="^1.1.0" />
 
     <js-module src="www/CameraConstants.js" name="Camera">
         <clobbers target="Camera" />
@@ -59,13 +59,17 @@
         </config-file>
 
         <source-file src="src/android/CameraLauncher.java" target-dir="src/org/apache/cordova/camera" />
+        <source-file src="src/android/CordovaUri.java" target-dir="src/org/apache/cordova/camera" />
         <source-file src="src/android/FileHelper.java" target-dir="src/org/apache/cordova/camera" />
         <source-file src="src/android/ExifHelper.java" target-dir="src/org/apache/cordova/camera" />
 		<source-file src="src/android/gson-2.3.1.jar" target-dir="libs" />
+        <source-file src="src/android/xml/provider_paths.xml" target-dir="res/xml" />
 
         <js-module src="www/CameraPopoverHandle.js" name="CameraPopoverHandle">
             <clobbers target="CameraPopoverHandle" />
         </js-module>
+
+        <framework src="com.android.support:support-v4:24.1.1+" />
 
      </platform>
 
