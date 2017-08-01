@@ -173,7 +173,7 @@ Take a photo and retrieve the image's file location and image metadata (exif, ge
         image.src = thisResult.filename
 
         if (thisResult.json_metadata != "{}") {
-            if (device.platform) == 'iOS') {
+            if (device.platform == 'iOS') {
 
               // notice the difference in the properties below and the format of the result when you run the app.
               // iOS and Android return the exif and gps differently and I am not converting or accounting for the Lat/Lon reference.
