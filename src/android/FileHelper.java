@@ -172,12 +172,12 @@ public class FileHelper {
         if (uriString.startsWith("content")) {
             Uri uri = Uri.parse(uriString);
             returnValue = cordova.getActivity().getContentResolver().openInputStream(uri);
-        } else if (uriString.startsWith("file://")) {
+        } else if (uriString.startsWith("content://")) {
             int question = uriString.indexOf("?");
             if (question > -1) {
                 uriString = uriString.substring(0, question);
             }
-            if (uriString.startsWith("file:///android_asset/")) {
+            if (uriString.startsWith("content:///android_asset/")) {
                 Uri uri = Uri.parse(uriString);
                 String relativePath = uri.getPath().substring(15);
                 returnValue = cordova.getActivity().getAssets().open(relativePath);
@@ -206,7 +206,7 @@ public class FileHelper {
      * @return a path without the "file://" prefix
      */
     public static String stripFileProtocol(String uriString) {
-        if (uriString.startsWith("file://")) {
+        if (uriString.startsWith("content://")) {
             uriString = uriString.substring(7);
         }
         return uriString;
