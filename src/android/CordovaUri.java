@@ -50,7 +50,7 @@ public class CordovaUri {
         {
             androidUri = inputUri;
             fileName = getFileNameFromUri(androidUri);
-            fileUri = Uri.parse("file://" + fileName);
+            fileUri = Uri.parse("content://" + fileName);
         }
         else
         {
