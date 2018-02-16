@@ -880,10 +880,10 @@ private void processResultFromGallery(int destType, Intent intent) {
                         // The modified image is cached by the app in order to get around this and not have to delete you
                         // application cache I'm adding the current system time to the end of the file url.
 
-                        fileLocation = "content://" + modifiedPath + "?" + System.currentTimeMillis();
+                        fileLocation = "file://" + modifiedPath + "?" + System.currentTimeMillis();
 
-                        // Note: For external files, content://, exif data will be missing, limitation of android.media.ExifInterface, can't handle streams
-                        // Need to use another library and can't use content:// URI's
+                        // Note: For external files, file://, exif data will be missing, limitation of android.media.ExifInterface, can't handle streams
+                        // Need to use another library and can't use file:// URI's
                         // You don't find file paths from content URI's
                         // See: http://stackoverflow.com/questions/34696787/a-final-answer-on-how-to-get-exif-data-from-uri
 
