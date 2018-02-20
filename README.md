@@ -11,7 +11,7 @@ The Camera.Destination must be set to FILE_URI and the build must be for Android
 This plugin is tightly integrated within the [Alpha Anywhere](http://www.alphasoftware.com) PhoneGap App Builder. Alpha Anywhere is a Rapid Mobile Application Development and Deployment platform.
 
 ## Installation
-    cordova plugin add cordova-plugin-camera-with-exif
+    cordova plugin add https://github.com/michaeloki/cordova-plugin-camera-with-exif
 
 ## PhoneGap Build plugin installation
     Add to config.xml:
