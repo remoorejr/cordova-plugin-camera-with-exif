@@ -73,6 +73,7 @@ import android.util.Log;
 import android.content.pm.PackageManager;
 import android.content.pm.PackageManager.NameNotFoundException;
 import android.content.pm.PermissionInfo;
+import android.util.Log;
 
 /**
  * This class launches the camera view, allows the user to take a picture, closes the camera view,
@@ -121,7 +122,7 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
     private boolean orientationCorrected;   // Has the picture's orientation been corrected
     private boolean allowEdit;              // Should we allow the user to crop the image.
 
-    protected final static String[] permissions = { Manifest.permission.CAMERA, Manifest.permission.READ_EXTERNAL_STORAGE };
+    protected final static String[] permissions = { Manifest.permission.CAMERA, Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE };
 
     public CallbackContext callbackContext;
     private int numPics;
@@ -201,6 +202,7 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
                     // FIXME: Stop always requesting the permission
                     if(!PermissionHelper.hasPermission(this, permissions[0])) {
                         PermissionHelper.requestPermission(this, SAVE_TO_ALBUM_SEC, Manifest.permission.READ_EXTERNAL_STORAGE);
+                        PermissionHelper.requestPermission(this, SAVE_TO_ALBUM_SEC, Manifest.permission.WRITE_EXTERNAL_STORAGE);
                     } else {
                         this.getImage(this.srcType, destType, encodingType);
                     }
@@ -261,7 +263,7 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
     public void callTakePicture(int returnType, int encodingType) {
         boolean saveAlbumPermission = PermissionHelper.hasPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE);
         boolean takePicturePermission = PermissionHelper.hasPermission(this, Manifest.permission.CAMERA);
-
+        boolean writeAlbumPermission = PermissionHelper.hasPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE);
         // CB-10120: The CAMERA permission does not need to be requested unless it is declared
         // in AndroidManifest.xml. This plugin does not declare it, but others may and so we must
         // check the package info to determine if the permission is present.
@@ -273,11 +275,15 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
                 String[] permissionsInPackage = packageManager.getPackageInfo(this.cordova.getActivity().getPackageName(), PackageManager.GET_PERMISSIONS).requestedPermissions;
                 if (permissionsInPackage != null) {
                     for (String permission : permissionsInPackage) {
+                        //Log.d(LOG_TAG, "Permission = "+permission);
                         if (permission.equals(Manifest.permission.CAMERA)) {
                             takePicturePermission = false;
                             break;
                         }
                     }
+                }
+                else {
+                    System.out.println("Existing permissions are "+permissionsInPackage);
                 }
             } catch (NameNotFoundException e) {
                 // We are requesting the info for our package, so this should
@@ -285,6 +291,9 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
             }
         }
 
+        if (!writeAlbumPermission) {
+            PermissionHelper.requestPermission(this, TAKE_PIC_SEC, Manifest.permission.WRITE_EXTERNAL_STORAGE);
+        }
         if (takePicturePermission && saveAlbumPermission) {
             takePicture(returnType, encodingType);
         } else if (saveAlbumPermission && !takePicturePermission) {
@@ -537,8 +546,8 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
         // in the gallery and the modified image is saved in the temporary
         // directory
         if (this.saveToPhotoAlbum) {
-            galleryUri = Uri.fromFile(new File(getPicutresPath()));
-
+            galleryUri = Uri.fromFile(new File(getPicturesPath()));
+            Log.d(LOG_TAG, "GalleryURI is "+galleryUri +" imageUri is "+imageUri);
             if(this.allowEdit && this.croppedUri != null) {
                 writeUncompressedImage(this.croppedUri, galleryUri);
             } else {
@@ -595,6 +604,8 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
                 // If we saved the uncompressed photo to the album, we can just
                 // return the URI we already created
                 if (this.saveToPhotoAlbum) {
+                    //Adding the filename to the object
+                    Log.d(LOG_TAG, "What is the filename "+galleryUri.toString());
                     resultObj.filename = galleryUri.toString();
                     jsonResult = thisGson.toJson(resultObj);
                     this.callbackContext.success(jsonResult);
@@ -660,13 +671,15 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
         bitmap = null;
     }
 
-private String getPicutresPath()
+private String getPicturesPath()
 {
     String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
     String imageFileName = "IMG_" + timeStamp + (this.encodingType == JPEG ? ".jpg" : ".png");
+    Log.i(LOG_TAG,"I got this filename "+imageFileName);
     File storageDir = Environment.getExternalStoragePublicDirectory(
             Environment.DIRECTORY_PICTURES);
     String galleryPath = storageDir.getAbsolutePath() + "/" + imageFileName;
+    Log.i(LOG_TAG,"directory "+galleryPath);
     return galleryPath;
 }
 
@@ -741,6 +754,7 @@ private String ouputModifiedBitmap(Bitmap bitmap, Uri uri) throws IOException {
 
 private void processResultFromGallery(int destType, Intent intent) {
     Uri uri = intent.getData();
+    Log.d(LOG_TAG, "imageUri is "+uri);
     if (uri == null) {
         if (croppedUri != null) {
             uri = croppedUri;
@@ -762,7 +776,7 @@ private void processResultFromGallery(int destType, Intent intent) {
             .create();
 
     String fileLocation = FileHelper.getRealPath(uri, this.cordova);
-    Log.d(LOG_TAG, "File locaton is: " + fileLocation);
+    Log.d(LOG_TAG, "File location is: " + fileLocation);
 
     // If you ask for video or all media type you will automatically get back a file URI
     // and there will be no attempt to resize any returned data
@@ -882,8 +896,8 @@ private void processResultFromGallery(int destType, Intent intent) {
 
                         fileLocation = "file://" + modifiedPath + "?" + System.currentTimeMillis();
 
-                        // Note: For external files, file://, exif data will be missing, limitation of android.media.ExifInterface, can't handle streams
-                        // Need to use another library and can't use file:// URI's
+                        // Note: For external files, content://, exif data will be missing, limitation of android.media.ExifInterface, can't handle streams
+                        // Need to use another library and can't use content:// URI's
                         // You don't find file paths from content URI's
                         // See: http://stackoverflow.com/questions/34696787/a-final-answer-on-how-to-get-exif-data-from-uri
 
@@ -942,10 +956,11 @@ private void processResultFromGallery(int destType, Intent intent) {
                 // to pass arcane codes back.
                 destType = requestCode - CROP_CAMERA;
                 try {
+                    Log.i(LOG_TAG, "I want to call destination "+destType);
                     processResultFromCamera(destType, intent);
                 } catch (IOException e) {
                     e.printStackTrace();
-                    Log.e(LOG_TAG, "Unable to write to file");
+                    Log.i(LOG_TAG, "Unable to write to file");
                 }
 
             }// If cancelled
@@ -990,9 +1005,11 @@ private void processResultFromGallery(int destType, Intent intent) {
         }
         // If retrieving photo from library
         else if ((srcType == PHOTOLIBRARY) || (srcType == SAVEDPHOTOALBUM)) {
+            Log.d(LOG_TAG, "Detected sourceType is "+srcType);
             if (resultCode == Activity.RESULT_OK && intent != null) {
                 final Intent i = intent;
                 final int finalDestType = destType;
+                //this.cordova.getActivity().runOnUiThread(new Runnable() {
                 cordova.getThreadPool().execute(new Runnable() {
                     public void run() {
                         processResultFromGallery(finalDestType, i);
@@ -1067,8 +1084,9 @@ private void processResultFromGallery(int destType, Intent intent) {
      * @throws FileNotFoundException
      * @throws IOException
      */
-    private void writeUncompressedImage(Uri src, Uri dest) throws FileNotFoundException,
+    private void writeUncompressedImage(Uri src, Uri dest) throws
             IOException {
+        Log.d(LOG_TAG, "I want to write uncompressed Image" +src + "destination is "+dest);
         FileInputStream fis = null;
         OutputStream os = null;
         try {
@@ -1497,7 +1515,7 @@ private void processResultFromGallery(int destType, Intent intent) {
     }
 
     /*
-  * This is dirty, but it does the job.
+  * This is dirty, but it does the job.Provider
   *
   * Since the FilesProvider doesn't really provide you a way of getting a URL from the file,
   * and since we actually need the Camera to create the file for us most of the time, we don't
