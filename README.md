@@ -1,5 +1,5 @@
 
-## cordova-plugin-camera-with-exif
+## cordova-plugin-camera-with-exif-update
 
 This plugin is an enhanced version of the stock cordova-plugin-camera which provides an API for taking pictures and for choosing images from
 the system's image library. 
@@ -11,11 +11,11 @@ The Camera.Destination must be set to FILE_URI and the build must be for Android
 This plugin is tightly integrated within the [Alpha Anywhere](http://www.alphasoftware.com) PhoneGap App Builder. Alpha Anywhere is a Rapid Mobile Application Development and Deployment platform.
 
 ## Installation
-    cordova plugin add https://github.com/michaeloki/cordova-plugin-camera-with-exif
+    cordova plugin add https://github.com/michaeloki/cordova-plugin-camera-with-exif-update
 
 ## PhoneGap Build plugin installation
     Add to config.xml:
-    <gap:plugin name="cordova-plugin-camera-with-exif" source="npm"/>
+    <gap:plugin name="cordova-plugin-camera-with-exif-update" source="npm"/>
 
 
 ## navigator.camera.getPicture
