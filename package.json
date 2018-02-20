@@ -1,9 +1,9 @@
 {
-  "name": "cordova-plugin-camera-with-exif",
-  "version": "1.2.2",
-  "description": "Cordova Camera Plugin that will return an image as well as the EXIF data (including GPS location) on iOS and Android devices.",
+  "name": "cordova-plugin-camera-with-exif-update",
+  "version": "1.2.3",
+  "description": "Cordova Camera Plugin that will return an image as well as the EXIF data (including GPS location) on iOS and all Android devices.",
   "cordova": {
-    "id": "cordova-plugin-camera-with-exif",
+    "id": "cordova-plugin-camera-with-exif-update",
     "platforms": [
       "android",
       "ios"
@@ -11,7 +11,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/remoorejr/cordova-plugin-camera-with-exif.git"
+    "url": "git+https://github.com/michaeloki/cordova-plugin-camera-with-exif.git"
   },
   "keywords": [
     "ecosystem:cordova",
@@ -20,7 +20,9 @@
     "exif",
     "gps",
     "cordova-android",
-    "cordova-ios"
+    "cordova-ios",
+    "exif on oreo",
+    "oreo"
   ],
   "engines": [
     {
@@ -28,10 +30,10 @@
       "version": ">=3.0.0"
     }
   ],
-  "author": "@remoorejr",
+  "author": "@michaeloki",
   "license": "Apache 2.0",
   "bugs": {
-    "url": "https://github.com/remoorejr/cordova-plugin-camera-with-exif/issues"
+    "url": "https://github.com/michaeloki/cordova-plugin-camera-with-exif/issues"
   },
-  "homepage": "https://github.com/remoorejr/cordova-plugin-camera-with-exif#readme"
+  "homepage": "https://github.com/michaeloki/cordova-plugin-camera-with-exif#readme"
 }
