@@ -27,7 +27,7 @@ import android.support.v4.content.FileProvider;
 import java.io.File;
 
 /*
- * This class exists because Andorid FilesProvider doesn't work on Android 4.4.4 and below and throws
+ * This class exists because Android FilesProvider doesn't work on Android 4.4.4 and below and throws
  * weird errors.  I'm not sure why writing to shared cache directories is somehow verboten, but it is
  * and this error is irritating for a Compatibility library to have.
  *
@@ -50,7 +50,7 @@ public class CordovaUri {
         {
             androidUri = inputUri;
             fileName = getFileNameFromUri(androidUri);
-            fileUri = Uri.parse("content://" + fileName);
+            fileUri = Uri.parse("file://" + fileName);
         }
         else
         {
