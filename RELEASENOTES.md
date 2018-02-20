@@ -147,3 +147,6 @@
 * Renamed test dir, added nested plugin.xml
 * CB-6958 added manual tests
 * CB-6958 Port camera tests to plugin-test-framework
+
+### 1.2.3 (Feb 20, 2018)
+* MO-101 Added support for Android Oreo
