@@ -3,18 +3,18 @@
 <plugin xmlns="http://apache.org/cordova/ns/plugins/1.0"
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:rim="http://www.blackberry.com/ns/widgets"
-    id="cordova-plugin-camera-with-exif"
-    version="1.2.2">
+    id="cordova-plugin-camera-with-exif-update"
+    version="1.2.3">
 
     <name>cordova-plugin-camera-with-exif</name>
     <description>
-       Cordova Camera Plugin that will return an image as well as the EXIF data (including GPS location) on iOS and Android devices. 
+       Cordova Camera Plugin that will return an image as well as the EXIF data (including GPS location) on iOS and all Android devices. 
     </description>
 
     <license>Apache 2.0</license>
 
     <keywords>cordova,camera,exif,gps,geotag</keywords>
-    <repo>https://github.com/remoorejr/cordova-plugin-camera-with-exif.git</repo>
+    <repo>https://github.com/michaeloki/cordova-plugin-camera-with-exif.git</repo>
 
     <engines>
        <engine name="cordova" version="&gt;=3.0.0" />
