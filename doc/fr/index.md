@@ -51,6 +51,8 @@ Vous pouvez faire ce que vous voulez avec l'image encodée ou l'URI, par exemple
 
 *   Publier les données sur un serveur distant
 
+* Android 8
+
  [1]: http://brianleroux.github.com/lawnchair/
 
 **NOTE**: la résolution de Photo sur les nouveaux appareils est assez bonne. Les photos sélectionnées de la Galerie de l'appareil ne sont pas réduites avec une baisse de la qualité, même si un paramètre de `qualité` est spécifié. Pour éviter les problèmes de mémoire, définissez `Camera.destinationType` à `FILE_URI` plutôt que `DATA_URL`.
