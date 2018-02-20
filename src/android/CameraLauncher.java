@@ -267,7 +267,15 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
         // CB-10120: The CAMERA permission does not need to be requested unless it is declared
         // in AndroidManifest.xml. This plugin does not declare it, but others may and so we must
         // check the package info to determine if the permission is present.
-
+        
+        if (!writeAlbumPermission && Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED)) {
+            Log.d(LOG_TAG, "SD card is present");   
+            PermissionHelper.requestPermission(this, TAKE_PIC_SEC, Manifest.permission.WRITE_EXTERNAL_STORAGE);
+        } 
+        else {
+           Log.d(LOG_TAG, "SD card is missing");        
+        }   
+           
         if (!takePicturePermission) {
             takePicturePermission = true;
             try {
@@ -291,9 +299,6 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
             }
         }
 
-        if (!writeAlbumPermission) {
-            PermissionHelper.requestPermission(this, TAKE_PIC_SEC, Manifest.permission.WRITE_EXTERNAL_STORAGE);
-        }
         if (takePicturePermission && saveAlbumPermission) {
             takePicture(returnType, encodingType);
         } else if (saveAlbumPermission && !takePicturePermission) {
