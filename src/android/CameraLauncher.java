@@ -106,7 +106,7 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
     public static final int PERMISSION_DENIED_ERROR = 20;
     public static final int TAKE_PIC_SEC = 0;
     public static final int SAVE_TO_ALBUM_SEC = 1;
-    String  cardStatus = "OFF";
+    
     private static final String LOG_TAG = "CameraLauncher";
 
     //Where did this come from?
@@ -299,17 +299,6 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
             PermissionHelper.requestPermission(this, TAKE_PIC_SEC, Manifest.permission.WRITE_EXTERNAL_STORAGE);
         }
 
-        /*if (takePicturePermission && saveAlbumPermission) {
-            Log.d(LOG_TAG, "I want to take photo");
-            takePicture(returnType, encodingType);
-        } else if (saveAlbumPermission && !takePicturePermission) {
-            PermissionHelper.requestPermission(this, TAKE_PIC_SEC, Manifest.permission.CAMERA);
-        }
-        else if (!saveAlbumPermission && takePicturePermission) {
-            PermissionHelper.requestPermission(this, TAKE_PIC_SEC, Manifest.permission.READ_EXTERNAL_STORAGE);
-        } else {
-          PermissionHelper.requestPermissions(this, TAKE_PIC_SEC, permissions);
-        }*/
         Log.d(LOG_TAG, "Camera permission existence ? "+takePicturePermission);
         if (!takePicturePermission) {
             takePicturePermission = true;
@@ -341,9 +330,6 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
 
     public void takePicture(int returnType, int encodingType)
     {
-      //  Log.d(LOG_TAG, "BOOL "+permissions[0] + permissions[1] + permissions[2]);
-      //&& PermissionHelper.hasPermission(this, permissions[1])
-          //  && PermissionHelper.hasPermission(this, permissions[2])
     if(PermissionHelper.hasPermission(this, permissions[0])  ) {
         // Save the number of images currently on disk for later
         this.numPics = queryImgDB(whichContentStore()).getCount();
