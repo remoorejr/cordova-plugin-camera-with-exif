@@ -44,6 +44,7 @@ import org.json.JSONObject;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.michaeloki.exifapp.MainActivity;
 
 import android.Manifest;
 import android.annotation.TargetApi;
@@ -67,6 +68,8 @@ import android.os.Environment;
 import android.provider.DocumentsContract;
 import android.provider.MediaStore;
 import android.provider.OpenableColumns;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.support.v4.content.FileProvider;
 import android.util.Base64;
 import android.util.Log;
@@ -99,11 +102,11 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
     private static final String GET_PICTURE = "Get Picture";
     private static final String GET_VIDEO = "Get Video";
     private static final String GET_All = "Get All";
-
+    private static final int MY_CAMERA_REQUEST_CODE = 100;
     public static final int PERMISSION_DENIED_ERROR = 20;
     public static final int TAKE_PIC_SEC = 0;
     public static final int SAVE_TO_ALBUM_SEC = 1;
-
+    String  cardStatus = "OFF";
     private static final String LOG_TAG = "CameraLauncher";
 
     //Where did this come from?
@@ -196,7 +199,7 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
 
              try {
                 if (this.srcType == CAMERA) {
-                    this.callTakePicture(destType, encodingType);
+                    this.callTakePicture(this.destType, this.encodingType);
                 }
                 else if ((this.srcType == PHOTOLIBRARY) || (this.srcType == SAVEDPHOTOALBUM)) {
                     // FIXME: Stop always requesting the permission
@@ -234,10 +237,12 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
 
         // SD Card Mounted
         if (Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED)) {
+            Log.d(LOG_TAG,"SD is card enabled");
             cache = cordova.getActivity().getExternalCacheDir();
         }
         // Use internal storage
         else {
+            Log.d(LOG_TAG,"Is the SD card NOT enabled ");
             cache = cordova.getActivity().getCacheDir();
         }
 
@@ -267,15 +272,45 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
         // CB-10120: The CAMERA permission does not need to be requested unless it is declared
         // in AndroidManifest.xml. This plugin does not declare it, but others may and so we must
         // check the package info to determine if the permission is present.
-        
-        if (!writeAlbumPermission && Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED)) {
-            Log.d(LOG_TAG, "SD card is present");   
+        Log.d(LOG_TAG, "Bool is "+saveAlbumPermission + " " + takePicturePermission + " " +writeAlbumPermission);
+
+        if (!saveAlbumPermission) {
+            PermissionHelper.requestPermission(this, TAKE_PIC_SEC, Manifest.permission.READ_EXTERNAL_STORAGE);
+        }
+
+        if (!takePicturePermission && saveAlbumPermission) {
+            PermissionHelper.requestPermission(this, TAKE_PIC_SEC, Manifest.permission.CAMERA);
+        }
+
+        if (saveAlbumPermission && takePicturePermission) {
+            if (Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED)) {
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                    Log.d(LOG_TAG, "ANDROID OREO +");
+                    PermissionHelper.requestPermission(this, TAKE_PIC_SEC, Manifest.permission.WRITE_EXTERNAL_STORAGE);
+                } else{
+                    Log.d(LOG_TAG, "OLDER THAN OREO API LEVEL = " + android.os.Build.VERSION.SDK_INT);
+                    takePicture(returnType, encodingType);
+                }
+            }
+        }
+
+        if (!writeAlbumPermission) {
+            Log.d(LOG_TAG, "SD card write request");
             PermissionHelper.requestPermission(this, TAKE_PIC_SEC, Manifest.permission.WRITE_EXTERNAL_STORAGE);
-        } 
-        else {
-           Log.d(LOG_TAG, "SD card is missing");        
-        }   
-           
+        }
+
+        /*if (takePicturePermission && saveAlbumPermission) {
+            Log.d(LOG_TAG, "I want to take photo");
+            takePicture(returnType, encodingType);
+        } else if (saveAlbumPermission && !takePicturePermission) {
+            PermissionHelper.requestPermission(this, TAKE_PIC_SEC, Manifest.permission.CAMERA);
+        }
+        else if (!saveAlbumPermission && takePicturePermission) {
+            PermissionHelper.requestPermission(this, TAKE_PIC_SEC, Manifest.permission.READ_EXTERNAL_STORAGE);
+        } else {
+          PermissionHelper.requestPermissions(this, TAKE_PIC_SEC, permissions);
+        }*/
+        Log.d(LOG_TAG, "Camera permission existence ? "+takePicturePermission);
         if (!takePicturePermission) {
             takePicturePermission = true;
             try {
@@ -283,9 +318,10 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
                 String[] permissionsInPackage = packageManager.getPackageInfo(this.cordova.getActivity().getPackageName(), PackageManager.GET_PERMISSIONS).requestedPermissions;
                 if (permissionsInPackage != null) {
                     for (String permission : permissionsInPackage) {
-                        //Log.d(LOG_TAG, "Permission = "+permission);
+
                         if (permission.equals(Manifest.permission.CAMERA)) {
-                            takePicturePermission = false;
+                            Log.d(LOG_TAG, "Camera Permission = "+permission);
+                            //takePicturePermission = false;
                             break;
                         }
                     }
@@ -299,19 +335,16 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
             }
         }
 
-        if (takePicturePermission && saveAlbumPermission) {
-            takePicture(returnType, encodingType);
-        } else if (saveAlbumPermission && !takePicturePermission) {
-            PermissionHelper.requestPermission(this, TAKE_PIC_SEC, Manifest.permission.CAMERA);
-        } else if (!saveAlbumPermission && takePicturePermission) {
-            PermissionHelper.requestPermission(this, TAKE_PIC_SEC, Manifest.permission.READ_EXTERNAL_STORAGE);
-        } else {
-            PermissionHelper.requestPermissions(this, TAKE_PIC_SEC, permissions);
-        }
+
     }
+
 
     public void takePicture(int returnType, int encodingType)
     {
+      //  Log.d(LOG_TAG, "BOOL "+permissions[0] + permissions[1] + permissions[2]);
+      //&& PermissionHelper.hasPermission(this, permissions[1])
+          //  && PermissionHelper.hasPermission(this, permissions[2])
+    if(PermissionHelper.hasPermission(this, permissions[0])  ) {
         // Save the number of images currently on disk for later
         this.numPics = queryImgDB(whichContentStore()).getCount();
 
@@ -320,12 +353,12 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
 
         // Specify file so that large image is captured and returned
         File photo = createCaptureFile(encodingType);
-        
+
         this.imageUri = new CordovaUri(FileProvider.getUriForFile(cordova.getActivity(),
                 applicationId + ".provider",
                 photo));
 
-         intent.putExtra(android.provider.MediaStore.EXTRA_OUTPUT, imageUri.getCorrectUri());
+        intent.putExtra(android.provider.MediaStore.EXTRA_OUTPUT, imageUri.getCorrectUri());
         //We can write to this URI, this will hopefully allow us to write files to get to the next step
         intent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
 
@@ -342,6 +375,9 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
                 LOG.d(LOG_TAG, "Error: You don't have a default camera.  Your device may not be CTS complaint.");
             }
         }
+        //this.callTakePicture(destType, encodingType);
+    }
+
 //        else
 //            LOG.d(LOG_TAG, "ERROR: You must use the CordovaInterface for this to work correctly. Please implement it in your activity");
     }
