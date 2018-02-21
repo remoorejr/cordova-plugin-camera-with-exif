@@ -44,7 +44,6 @@ import org.json.JSONObject;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import com.michaeloki.exifapp.MainActivity;
 
 import android.Manifest;
 import android.annotation.TargetApi;
