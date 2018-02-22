@@ -296,10 +296,6 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
             }
         }
 
-
-
-
-        Log.d(LOG_TAG, "Camera permission existence  "+takePicturePermission);
         if (!takePicturePermission) {
 
             //takePicturePermission = true;
@@ -363,7 +359,6 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
                     LOG.d(LOG_TAG, "Error: You don't have a default camera.  Your device may not be CTS complaint.");
                 }
             }
-            //this.callTakePicture(destType, encodingType);
         }
 
 //        else
