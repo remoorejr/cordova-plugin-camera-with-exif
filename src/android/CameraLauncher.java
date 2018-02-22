@@ -542,18 +542,6 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
         boolean takePicturePermission = PermissionHelper.hasPermission(this, Manifest.permission.CAMERA);
         boolean writeAlbumPermission = PermissionHelper.hasPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE);
 
-        Log.d(LOG_TAG, "Booleans is " + " " + takePicturePermission + " " +writeAlbumPermission);
-
-
-        /*if(!takePicturePermission){
-            Log.d(LOG_TAG, "Read permission exists but Camera permission is NOT granted  so it "+takePicturePermission);
-            PermissionHelper.requestPermission(this, TAKE_PIC_SEC, Manifest.permission.CAMERA);
-        }
-        else if (!writeAlbumPermission){
-            Log.d(LOG_TAG, "Read and camera permissions exist but write permission is NOT granted  so  "+writeAlbumPermission);
-            PermissionHelper.requestPermission(this, TAKE_PIC_SEC, Manifest.permission.WRITE_EXTERNAL_STORAGE);
-        }*/
-        //else {
             // Create an ExifHelper to save the exif data that is lost during compression
             ExifHelper exif = new ExifHelper();
             String sourcePath = (this.allowEdit && this.croppedUri != null) ?
