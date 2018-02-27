@@ -26,6 +26,7 @@ import android.os.Build;
 import android.os.Environment;
 import android.provider.DocumentsContract;
 import android.provider.MediaStore;
+import android.util.Log;
 import android.webkit.MimeTypeMap;
 
 import org.apache.cordova.CordovaInterface;
@@ -206,6 +207,7 @@ public class FileHelper {
      * @return a path without the "file://" prefix
      */
     public static String stripFileProtocol(String uriString) {
+        Log.d("CAMERALAUNCHER", " in FileHelper uristring = "+uriString);
         if (uriString.startsWith("file://")) {
             uriString = uriString.substring(7);
         }
@@ -316,4 +318,4 @@ public class FileHelper {
     public static boolean isGooglePhotosUri(Uri uri) {
         return "com.google.android.apps.photos.content".equals(uri.getAuthority());
     }
-}
+} 
