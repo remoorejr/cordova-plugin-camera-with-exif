@@ -16,7 +16,7 @@ This plugin is tightly integrated within the [Alpha Anywhere](http://www.alphaso
 ## PhoneGap Build plugin installation
 Add to config.xml:
 ```xml
-    <gap:plugin name="cordova-plugin-camera-with-exif" source="npm"/>
+<gap:plugin name="cordova-plugin-camera-with-exif" source="npm"/>
 ```
 
 
