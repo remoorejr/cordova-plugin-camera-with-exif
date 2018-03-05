@@ -28,7 +28,7 @@ base64-encoded `String`, or as the URI for the image file.  The method
 itself returns a `CameraPopoverHandle` object that can be used to
 reposition the file selection popover.
 ```javascript
-    navigator.camera.getPicture( cameraSuccess, cameraError, cameraOptions );
+navigator.camera.getPicture( cameraSuccess, cameraError, cameraOptions );
 ```
 
 ### Description
@@ -86,7 +86,7 @@ than `DATA_URL`.
 -  __CameraUsesGeolocation__ (boolean, defaults to true). For capturing JPEGs, set to true to get geolocation data in the EXIF header. This will trigger a request for geolocation permissions if set to true.
 
 ```xml
-    <preference name="CameraUsesGeolocation" value="false" />
+<preference name="CameraUsesGeolocation" value="false" />
 ```
 
 Note: this preference is not required with this plugin. It is assumed that the only reason that you are using this plugin is to get geolocation and exif data. If present, this preference has no effect on this plugin.
@@ -142,9 +142,9 @@ can cause problems.  Wrap the alert within a `setTimeout()` to allow
 the iOS image picker or popover to fully close before the alert
 displays:
 ```javascript
-    setTimeout(function() {
-        // do your thing here!
-    }, 0);
+setTimeout(function() {
+    // do your thing here!
+}, 0);
 ```
 
 ### Windows Phone 7 Quirks
@@ -163,54 +163,56 @@ Tizen only supports a `destinationType` of
 Take a photo and retrieve the image's file location and image metadata (exif, geolocation):
 
 ```javascript
-    // This iOS/Android only example requires the dialog and the device plugin as well.
+// This iOS/Android only example requires the dialog and the device plugin as well.
 
-    navigator.camera.getPicture(onSuccess, onFail, { quality: 50,
-        destinationType: Camera.DestinationType.FILE_URI });
+navigator.camera.getPicture(onSuccess, onFail, { quality: 50,
+    destinationType: Camera.DestinationType.FILE_URI });
 
-    function onSuccess(result) {
-       // convert JSON string to JSON Object
-       var thisResult = JSON.parse(result);
+function onSuccess(result) {
+   // convert JSON string to JSON Object
+   var thisResult = JSON.parse(result);
 
-       // convert json_metadata JSON string to JSON Object 
-       var metadata = JSON.parse(thisResult.json_metadata);
+   // convert json_metadata JSON string to JSON Object 
+   var metadata = JSON.parse(thisResult.json_metadata);
 
-        var image = document.getElementById('myImage');
-        image.src = thisResult.filename
+    var image = document.getElementById('myImage');
+    image.src = thisResult.filename
 
-        if (thisResult.json_metadata != "{}") {
-            if (device.platform) == 'iOS') {
+    if (thisResult.json_metadata != "{}") {
+        if (device.platform) == 'iOS') {
 
-              // notice the difference in the properties below and the format of the result when you run the app.
-              // iOS and Android return the exif and gps differently and I am not converting or accounting for the Lat/Lon reference.
-              // This is simply the raw data being returned.
+          // notice the difference in the properties below and the format of the result when you run the app.
+          // iOS and Android return the exif and gps differently and I am not converting or accounting for the Lat/Lon reference.
+          // This is simply the raw data being returned.
 
-              navigator.notification.alert('Lat: '+metadata.GPS.Latitude+' Lon: '+metadata.GPS.Longitude);
-            } else {
-               navigator.notification.alert('Lat: '+metadata.gpsLatitude+' Lon: '+metadata.gpsLongitude);
-            }
-
+          navigator.notification.alert('Lat: '+metadata.GPS.Latitude+' Lon: '+metadata.GPS.Longitude);
+        } else {
+           navigator.notification.alert('Lat: '+metadata.gpsLatitude+' Lon: '+metadata.gpsLongitude);
         }
-    }
 
-    function onFail(message) {
-        alert('Failed because: ' + message);
     }
+}
+
+function onFail(message) {
+    alert('Failed because: ' + message);
+}
 ```
 
 ## CameraOptions
 
 Optional parameters to customize the camera settings.
 ```javascript
-    { quality : 75,
-      destinationType : Camera.DestinationType.DATA_URL,
-      sourceType : Camera.PictureSourceType.CAMERA,
-      allowEdit : true,
-      encodingType: Camera.EncodingType.JPEG,
-      targetWidth: 100,
-      targetHeight: 100,
-      popoverOptions: CameraPopoverOptions,
-      saveToPhotoAlbum: false };
+{
+    quality : 75,
+    destinationType : Camera.DestinationType.DATA_URL,
+    sourceType : Camera.PictureSourceType.CAMERA,
+    allowEdit : true,
+    encodingType: Camera.EncodingType.JPEG,
+    targetWidth: 100,
+    targetHeight: 100,
+    popoverOptions: CameraPopoverOptions,
+    saveToPhotoAlbum: false
+};
 ```
 
 ### Options
@@ -219,41 +221,44 @@ Optional parameters to customize the camera settings.
 
 - __destinationType__: Choose the format of the return value. The default is FILE_URI. Defined in `navigator.camera.DestinationType` _(Number)_
 
-        Camera.DestinationType = {
-            DATA_URL : 0,      // Return image as base64-encoded string
-            FILE_URI : 1,      // Return image file URI
-            NATIVE_URI : 2     // Return image native URI (e.g., assets-library:// on iOS or content:// on Android)
-        };
+```javascript
+Camera.DestinationType = {
+    DATA_URL : 0,      // Return image as base64-encoded string
+    FILE_URI : 1,      // Return image file URI
+    NATIVE_URI : 2     // Return image native URI (e.g., assets-library:// on iOS or content:// on Android)
+};
+```
 
 - __sourceType__: Set the source of the picture. The default is CAMERA. Defined in `navigator.camera.PictureSourceType` _(Number)_
-
-        Camera.PictureSourceType = {
-            PHOTOLIBRARY : 0,
-            CAMERA : 1,
-            SAVEDPHOTOALBUM : 2
-        };
+```javascript
+Camera.PictureSourceType = {
+    PHOTOLIBRARY : 0,
+    CAMERA : 1,
+    SAVEDPHOTOALBUM : 2
+};
+```
 
 - __allowEdit__: Allow simple editing of image before selection. _(Boolean)_
 
 - __encodingType__: Choose the  returned image file's encoding. Default is JPEG. Defined in `navigator.camera.EncodingType` _(Number)_
-
-        Camera.EncodingType = {
-            JPEG : 0,               // Return JPEG encoded image
-            PNG : 1                 // Return PNG encoded image
-        };
-
+```javascript
+Camera.EncodingType = {
+    JPEG : 0,               // Return JPEG encoded image
+    PNG : 1                 // Return PNG encoded image
+};
+```
 - __targetWidth__: Width in pixels to scale image. Must be used with __targetHeight__.  Aspect ratio remains constant. _(Number)_
 
 - __targetHeight__: Height in pixels to scale image. Must be used with __targetWidth__. Aspect ratio remains constant. _(Number)_
 
 - __mediaType__: Set the type of media to select from.  Only works when `PictureSourceType` is `PHOTOLIBRARY` or `SAVEDPHOTOALBUM`. Defined in `nagivator.camera.MediaType` _(Number)_
-
-        Camera.MediaType = {
-            PICTURE: 0,    // allow selection of still pictures only. DEFAULT. Will return format specified via DestinationType
-            VIDEO: 1,      // allow selection of video only, WILL ALWAYS RETURN FILE_URI
-            ALLMEDIA : 2   // allow selection from all media types
-        };
-
+```javascript
+Camera.MediaType = {
+    PICTURE: 0,    // allow selection of still pictures only. DEFAULT. Will return format specified via DestinationType
+    VIDEO: 1,      // allow selection of video only, WILL ALWAYS RETURN FILE_URI
+    ALLMEDIA : 2   // allow selection from all media types
+};
+```
 - __correctOrientation__: Rotate the image to correct for the orientation of the device during capture. _(Boolean)_
 
 - __saveToPhotoAlbum__: Save the image to the photo album on the device after capture. _(Boolean)_
@@ -261,11 +266,12 @@ Optional parameters to customize the camera settings.
 - __popoverOptions__: iOS-only options that specify popover location in iPad.  Defined in `CameraPopoverOptions`.
 
 - __cameraDirection__: Choose the camera to use (front- or back-facing). The default is BACK. Defined in `navigator.camera.Direction` _(Number)_
-
-        Camera.Direction = {
-            BACK : 0,      // Use the back-facing camera
-            FRONT : 1      // Use the front-facing camera
-        };
+```javascript
+Camera.Direction = {
+    BACK : 0,      // Use the back-facing camera
+    FRONT : 1      // Use the front-facing camera
+};
+```
 
 ### Amazon Fire OS Quirks
 
@@ -344,10 +350,11 @@ You may also comment or up-vote the related issue in the [issue tracker](https:/
 ## CameraError
 
 onError callback function that provides an error message.
-
-    function(message) {
-        // Show a helpful message
-    }
+```javascript
+function(message) {
+    // Show a helpful message
+}
+```
 
 ### Parameters
 
@@ -357,24 +364,25 @@ onError callback function that provides an error message.
 ## cameraSuccess
 
 onSuccess callback function that provides the image data.
-
-    function(imageData) {
-        // Do something with the image
-    }
+```javascript
+function(imageData) {
+    // Do something with the image
+}
+```
 
 ### Parameters
 
 - __imageData__: Base64 encoding of the image data, _or_ the image file URI, depending on `cameraOptions` in effect. _(String)_
 
 ### Example
-
-    // Show image
-    //
-    function cameraCallback(imageData) {
-        var image = document.getElementById('myImage');
-        image.src = "data:image/jpeg;base64," + imageData;
-    }
-
+```javascript
+// Show image
+//
+function cameraCallback(imageData) {
+    var image = document.getElementById('myImage');
+    image.src = "data:image/jpeg;base64," + imageData;
+}
+```
 
 ## CameraPopoverHandle
 
@@ -397,18 +405,19 @@ __Parameters__:
 - `cameraPopoverOptions`: the `CameraPopoverOptions` that specify the new position
 
 ### Example
+```javascript
+var cameraPopoverHandle = navigator.camera.getPicture(onSuccess, onFail, {
+    destinationType: Camera.DestinationType.FILE_URI,
+    sourceType: Camera.PictureSourceType.PHOTOLIBRARY,
+    popoverOptions: new CameraPopoverOptions(300, 300, 100, 100, Camera.PopoverArrowDirection.ARROW_ANY)
+});
 
-     var cameraPopoverHandle = navigator.camera.getPicture(onSuccess, onFail,
-         { destinationType: Camera.DestinationType.FILE_URI,
-           sourceType: Camera.PictureSourceType.PHOTOLIBRARY,
-           popoverOptions: new CameraPopoverOptions(300, 300, 100, 100, Camera.PopoverArrowDirection.ARROW_ANY)
-         });
-
-     // Reposition the popover if the orientation changes.
-     window.onorientationchange = function() {
-         var cameraPopoverOptions = new CameraPopoverOptions(0, 0, 100, 100, Camera.PopoverArrowDirection.ARROW_ANY);
-         cameraPopoverHandle.setPosition(cameraPopoverOptions);
-     }
+// Reposition the popover if the orientation changes.
+window.onorientationchange = function() {
+    var cameraPopoverOptions = new CameraPopoverOptions(0, 0, 100, 100, Camera.PopoverArrowDirection.ARROW_ANY);
+    cameraPopoverHandle.setPosition(cameraPopoverOptions);
+}
+```
 
 
 ## CameraPopoverOptions
@@ -416,13 +425,15 @@ __Parameters__:
 iOS-only parameters that specify the anchor element location and arrow
 direction of the popover when selecting images from an iPad's library
 or album.
-
-    { x : 0,
-      y :  32,
-      width : 320,
-      height : 480,
-      arrowDir : Camera.PopoverArrowDirection.ARROW_ANY
-    };
+```javascript
+{
+    x : 0,
+    y :  32,
+    width : 320,
+    height : 480,
+    arrowDir : Camera.PopoverArrowDirection.ARROW_ANY
+};
+```
 
 ### CameraPopoverOptions
 
@@ -435,14 +446,15 @@ or album.
 - __height__: height, in pixels, of the screen element onto which to anchor the popover. _(Number)_
 
 - __arrowDir__: Direction the arrow on the popover should point.  Defined in `Camera.PopoverArrowDirection` _(Number)_
-
-            Camera.PopoverArrowDirection = {
-                ARROW_UP : 1,        // matches iOS UIPopoverArrowDirection constants
-                ARROW_DOWN : 2,
-                ARROW_LEFT : 4,
-                ARROW_RIGHT : 8,
-                ARROW_ANY : 15
-            };
+```javascript
+Camera.PopoverArrowDirection = {
+    ARROW_UP : 1,        // matches iOS UIPopoverArrowDirection constants
+    ARROW_DOWN : 2,
+    ARROW_LEFT : 4,
+    ARROW_RIGHT : 8,
+    ARROW_ANY : 15
+};
+```
 
 Note that the size of the popover may change to adjust to the
 direction of the arrow and orientation of the screen.  Make sure to
@@ -453,8 +465,9 @@ location.
 
 Removes intermediate photos taken by the camera from temporary
 storage.
-
-    navigator.camera.cleanup( cameraSuccess, cameraError );
+```javascript
+navigator.camera.cleanup( cameraSuccess, cameraError );
+```
 
 ### Description
 
@@ -469,14 +482,14 @@ after calling `camera.getPicture`. Applies only when the value of
 
 ### Example
 ```javascript
-    navigator.camera.cleanup(onSuccess, onFail);
+navigator.camera.cleanup(onSuccess, onFail);
 
-    function onSuccess() {
-        console.log("Camera cleanup success.")
-    }
+function onSuccess() {
+    console.log("Camera cleanup success.")
+}
 
-    function onFail(message) {
-        alert('Failed because: ' + message);
-    }
+function onFail(message) {
+    alert('Failed because: ' + message);
+}
 ```
 
