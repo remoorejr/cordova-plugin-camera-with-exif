@@ -14,8 +14,10 @@ This plugin is tightly integrated within the [Alpha Anywhere](http://www.alphaso
     cordova plugin add cordova-plugin-camera-with-exif
 
 ## PhoneGap Build plugin installation
-    Add to config.xml:
+Add to config.xml:
+```xml
     <gap:plugin name="cordova-plugin-camera-with-exif" source="npm"/>
+```
 
 
 ## navigator.camera.getPicture
@@ -25,8 +27,9 @@ image gallery.  The image is passed to the success callback as a
 base64-encoded `String`, or as the URI for the image file.  The method
 itself returns a `CameraPopoverHandle` object that can be used to
 reposition the file selection popover.
-
+```javascript
     navigator.camera.getPicture( cameraSuccess, cameraError, cameraOptions );
+```
 
 ### Description
 
@@ -82,7 +85,9 @@ than `DATA_URL`.
 
 -  __CameraUsesGeolocation__ (boolean, defaults to true). For capturing JPEGs, set to true to get geolocation data in the EXIF header. This will trigger a request for geolocation permissions if set to true.
 
-        <preference name="CameraUsesGeolocation" value="false" />
+```xml
+    <preference name="CameraUsesGeolocation" value="false" />
+```
 
 Note: this preference is not required with this plugin. It is assumed that the only reason that you are using this plugin is to get geolocation and exif data. If present, this preference has no effect on this plugin.
 
@@ -136,10 +141,11 @@ Including a JavaScript `alert()` in either of the callback functions
 can cause problems.  Wrap the alert within a `setTimeout()` to allow
 the iOS image picker or popover to fully close before the alert
 displays:
-
+```javascript
     setTimeout(function() {
         // do your thing here!
     }, 0);
+```
 
 ### Windows Phone 7 Quirks
 
@@ -156,7 +162,7 @@ Tizen only supports a `destinationType` of
 
 Take a photo and retrieve the image's file location and image metadata (exif, geolocation):
 
-
+```javascript
     // This iOS/Android only example requires the dialog and the device plugin as well.
 
     navigator.camera.getPicture(onSuccess, onFail, { quality: 50,
@@ -190,11 +196,12 @@ Take a photo and retrieve the image's file location and image metadata (exif, ge
     function onFail(message) {
         alert('Failed because: ' + message);
     }
+```
 
 ## CameraOptions
 
 Optional parameters to customize the camera settings.
-
+```javascript
     { quality : 75,
       destinationType : Camera.DestinationType.DATA_URL,
       sourceType : Camera.PictureSourceType.CAMERA,
@@ -204,6 +211,7 @@ Optional parameters to customize the camera settings.
       targetHeight: 100,
       popoverOptions: CameraPopoverOptions,
       saveToPhotoAlbum: false };
+```
 
 ### Options
 
@@ -460,7 +468,7 @@ after calling `camera.getPicture`. Applies only when the value of
 - iOS
 
 ### Example
-
+```javascript
     navigator.camera.cleanup(onSuccess, onFail);
 
     function onSuccess() {
@@ -470,5 +478,5 @@ after calling `camera.getPicture`. Applies only when the value of
     function onFail(message) {
         alert('Failed because: ' + message);
     }
-
+```
 
