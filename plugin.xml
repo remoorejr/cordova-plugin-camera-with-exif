@@ -8,7 +8,7 @@
 
     <name>cordova-plugin-camera-with-exif</name>
     <description>
-       Cordova Camera Plugin that will return an image as well as the EXIF data (including GPS location) on iOS and Android devices. 
+       Cordova Camera Plugin that will return an image as well as the EXIF data (including GPS location) on iOS and Android devices.
     </description>
 
     <license>Apache 2.0</license>
@@ -19,8 +19,6 @@
     <engines>
        <engine name="cordova" version="&gt;=3.0.0" />
     </engines>
-
-     <dependency id="cordova-plugin-compat" version="^1.1.0" />
 
     <js-module src="www/CameraConstants.js" name="Camera">
         <clobbers target="Camera" />
@@ -40,12 +38,12 @@
             <feature name="Camera">
                 <param name="firefoxos-package" value="Camera" />
             </feature>
-        </config-file>                                         
-        
+        </config-file>
+
         <js-module src="src/firefoxos/CameraProxy.js" name="CameraProxy">
           <runs />
         </js-module>
-    </platform>  
+    </platform>
 
     <!-- android -->
     <platform name="android">
@@ -57,7 +55,7 @@
         <config-file target="AndroidManifest.xml" parent="/*">
             <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
         </config-file>
-		
+
 		<config-file target="AndroidManifest.xml" parent="application">
 	          <provider
 	              android:name="android.support.v4.content.FileProvider"
@@ -105,7 +103,7 @@
         </js-module>
 
      </platform>
-     
+
      <!-- ubuntu -->
      <platform name="ubuntu">
          <config-file target="config.xml" parent="/*">
@@ -167,7 +165,7 @@
             <config-file target="*-Info.plist" parent="NSLocationWhenInUseUsageDescription">
                 <string>This app requires access to your location when in use to include location info in photo metadata.</string>
             </config-file>
-                  
+
      </platform>
 
     <!-- blackberry10 -->
