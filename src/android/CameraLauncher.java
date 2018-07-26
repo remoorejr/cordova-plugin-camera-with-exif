@@ -121,7 +121,7 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
     private boolean orientationCorrected;   // Has the picture's orientation been corrected
     private boolean allowEdit;              // Should we allow the user to crop the image.
 
-    protected final static String[] permissions = { Manifest.permission.CAMERA, Manifest.permission.READ_EXTERNAL_STORAGE };
+    protected final static String[] permissions = { Manifest.permission.CAMERA, Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE };
 
     public CallbackContext callbackContext;
     private int numPics;
@@ -199,7 +199,7 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
                 }
                 else if ((this.srcType == PHOTOLIBRARY) || (this.srcType == SAVEDPHOTOALBUM)) {
                     // FIXME: Stop always requesting the permission
-                    if(!PermissionHelper.hasPermission(this, permissions[0])) {
+                    if(!PermissionHelper.hasPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE)) {
                         PermissionHelper.requestPermission(this, SAVE_TO_ALBUM_SEC, Manifest.permission.READ_EXTERNAL_STORAGE);
                     } else {
                         this.getImage(this.srcType, destType, encodingType);
@@ -259,7 +259,8 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
      * @param returnType        Set the type of image to return.
      */
     public void callTakePicture(int returnType, int encodingType) {
-        boolean saveAlbumPermission = PermissionHelper.hasPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE);
+        boolean saveAlbumPermission = PermissionHelper.hasPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) 
+			&& PermissionHelper.hasPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE);
         boolean takePicturePermission = PermissionHelper.hasPermission(this, Manifest.permission.CAMERA);
 
         // CB-10120: The CAMERA permission does not need to be requested unless it is declared
@@ -290,7 +291,7 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
         } else if (saveAlbumPermission && !takePicturePermission) {
             PermissionHelper.requestPermission(this, TAKE_PIC_SEC, Manifest.permission.CAMERA);
         } else if (!saveAlbumPermission && takePicturePermission) {
-            PermissionHelper.requestPermission(this, TAKE_PIC_SEC, Manifest.permission.READ_EXTERNAL_STORAGE);
+            PermissionHelper.requestPermission(this, TAKE_PIC_SEC, new String[]{Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE});
         } else {
             PermissionHelper.requestPermissions(this, TAKE_PIC_SEC, permissions);
         }
@@ -404,17 +405,17 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
                 intent.addCategory(Intent.CATEGORY_OPENABLE);
             }
         } else if (this.mediaType == VIDEO) {
-                intent.setType("video/*");
-                title = GET_VIDEO;
-          intent.setAction(Intent.ACTION_GET_CONTENT);
-          intent.addCategory(Intent.CATEGORY_OPENABLE);
+            intent.setType("video/*");
+            title = GET_VIDEO;
+			intent.setAction(Intent.ACTION_GET_CONTENT);
+			intent.addCategory(Intent.CATEGORY_OPENABLE);
         } else if (this.mediaType == ALLMEDIA) {
-                // I wanted to make the type 'image/*, video/*' but this does not work on all versions
-                // of android so I had to go with the wildcard search.
-                intent.setType("*/*");
-                title = GET_All;
-          intent.setAction(Intent.ACTION_GET_CONTENT);
-          intent.addCategory(Intent.CATEGORY_OPENABLE);
+            // I wanted to make the type 'image/*, video/*' but this does not work on all versions
+            // of android so I had to go with the wildcard search.
+            intent.setType("*/*");
+            title = GET_All;
+			intent.setAction(Intent.ACTION_GET_CONTENT);
+			intent.addCategory(Intent.CATEGORY_OPENABLE);
         }
         if (this.cordova != null) {
             this.cordova.startActivityForResult((CordovaPlugin) this, Intent.createChooser(intent,
@@ -448,6 +449,8 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
       }
       // create new file handle to get full resolution crop
       croppedUri = Uri.fromFile(createCaptureFile(this.encodingType, System.currentTimeMillis() + ""));
+	  cropIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+      cropIntent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
       cropIntent.putExtra("output", croppedUri);
 
       // start the activity - we handle returning in onActivityResult
@@ -696,16 +699,13 @@ private String ouputModifiedBitmap(Bitmap bitmap, Uri uri) throws IOException {
         String realPath = FileHelper.getRealPath(uri, this.cordova);
 
         // Get filename from uri
-        String fileName = realPath != null ? realPath.substring(realPath.lastIndexOf('/') + 1, realPath.lastIndexOf(".") + 1) : "modified.";
-
-        // Append filename extension based on output encoding type
-        fileName += (this.encodingType == JPEG ? "jpg" : "png");
+		String fileName = realPath != null ? realPath.substring(realPath.lastIndexOf('/') + 1) :
+                "modified." + (this.encodingType == JPEG ? "jpg" : "png");
 
         String modifiedPath = getTempDirectoryPath() + "/" + fileName;
 
         OutputStream os = new FileOutputStream(modifiedPath);
-        CompressFormat compressFormat = this.encodingType == JPEG ?
-                CompressFormat.JPEG :
+        CompressFormat compressFormat = this.encodingType == JPEG ? CompressFormat.JPEG :
                 CompressFormat.PNG;
 
         bitmap.compress(compressFormat, this.mQuality, os);
@@ -762,7 +762,7 @@ private void processResultFromGallery(int destType, Intent intent) {
             .create();
 
     String fileLocation = FileHelper.getRealPath(uri, this.cordova);
-    Log.d(LOG_TAG, "File locaton is: " + fileLocation);
+    Log.d(LOG_TAG, "File location is: " + fileLocation);
 
     // If you ask for video or all media type you will automatically get back a file URI
     // and there will be no attempt to resize any returned data
@@ -809,7 +809,7 @@ private void processResultFromGallery(int destType, Intent intent) {
         } else {
             thisJson = jsonError;
         }
-        // This is a special case to just return the path as no scaling,
+        // This is a special case so just return the path as no scaling,
         // rotating, nor compressing needs to be done
         if (this.targetHeight == -1 && this.targetWidth == -1 &&
                 (destType == FILE_URI || destType == NATIVE_URI) && !this.correctOrientation) {
@@ -827,7 +827,7 @@ private void processResultFromGallery(int destType, Intent intent) {
 
             // Get the path to the image. Makes loading so much easier.
             String mimeType = FileHelper.getMimeType(uriString, this.cordova);
-            // If we don't have a valid image so quit.
+            // If we don't have a valid image, quit.
             if (!("image/jpeg".equalsIgnoreCase(mimeType) || "image/png".equalsIgnoreCase(mimeType))) {
                 Log.d(LOG_TAG, "I either have a null image path or bitmap");
                 this.failPicture("Unable to retrieve path to picture!");
@@ -1198,7 +1198,7 @@ private void processResultFromGallery(int destType, Intent intent) {
     }
 
     /**
-     * Maintain the aspect ratio so the resulting image does not look smooshed
+     * Maintain the aspect ratio so the resulting image displays correctly
      *
      * @param origWidth
      * @param origHeight
