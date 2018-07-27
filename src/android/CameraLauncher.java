@@ -15,6 +15,8 @@
        KIND, either express or implied.  See the License for the
        specific language governing permissions and limitations
        under the License.
+
+       Last revision: 07-27-2018 : added Cloud support for Google Drive, Microsoft OneDrive & Dropbox, no exif from Cloud images. 
 */
 package org.apache.cordova.camera;
 
@@ -372,7 +374,6 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
     /**
      * Get image from photo library.
      *
-     * @param quality           Compression quality hint (0-100: 0=low quality & high compression, 100=compress of max quality)
      * @param srcType           The album to get image from.
      * @param returnType        Set the type of image to return.
      * @param encodingType
@@ -782,33 +783,44 @@ private void processResultFromGallery(int destType, Intent intent) {
         // read exif data if URI is not remote
 
         Uri exifUri = uri;
+        String thisUri = uri.toString();
+        Boolean cloudImage = false;
 
-        // required to support exifhelper
-        exifUri = Uri.fromFile(new File(FileHelper.getRealPath(uri, this.cordova)));
-        String thisFile = FileHelper.stripFileProtocol(exifUri.toString());
-
-
-        // thisFile will be a null string or '/' if the file is remote
-        // I'm unable to extract exif data from remote files, although I try!
-
-        if (thisFile.length() > 7) {
-            ExifHelper exif = new ExifHelper();
-            try {
-                exif.createInFile(thisFile);
-                exif.readExifData();
-
-                // get orientation
-                rotate = exif.getOrientation();
-
-                //Convert exif to JSON
-                thisJson = thisGson.toJson(exif);
-
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-
-        } else {
+        // identify cloud photos ( there may be more!) , no exif processing
+        if (thisUri.contains("content://com.google") ||
+                (thisUri.contains("content://com.microsoft")) ||
+                (thisUri.contains("content://com.dropbox"))
+                ) {
             thisJson = jsonError;
+            cloudImage = true;
+        } else {
+
+            // required to support exifhelper
+            exifUri = Uri.fromFile(new File(FileHelper.getRealPath(uri, this.cordova)));
+            String thisFile = FileHelper.stripFileProtocol(exifUri.toString());
+
+            // thisFile will be a null string or '/' if the file is remote
+            // can't extract exif data from cloud files
+
+            if (thisFile.length() > 7) {
+                ExifHelper exif = new ExifHelper();
+                try {
+                    exif.createInFile(thisFile);
+                    exif.readExifData();
+
+                    // get orientation
+                    rotate = exif.getOrientation();
+
+                    //Convert exif to JSON
+                    thisJson = thisGson.toJson(exif);
+
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+
+            } else {
+                thisJson = jsonError;
+            }
         }
         // This is a special case so just return the path as no scaling,
         // rotating, nor compressing needs to be done
@@ -902,7 +914,13 @@ private void processResultFromGallery(int destType, Intent intent) {
                 }
                 else {
 
-                    resultObj.filename = fileLocation;
+                    if (cloudImage) {
+                        // image selected from Google Drive, Skydrive, Dropbox
+                        // rotation may be off, thoughts? Could add a method to allow rotation
+                        resultObj.filename = uri.toString();
+                    } else {
+                        resultObj.filename = fileLocation;
+                    }
                     resultObj.json_metadata = thisJson;
 
                     jsonResult = thisGson.toJson(resultObj);
@@ -1125,7 +1143,7 @@ private void processResultFromGallery(int destType, Intent intent) {
     /**
      * Return a scaled bitmap based on the target width and height
      *
-     * @param imagePath
+     * @param imageUrl
      * @return
      * @throws IOException
      */
