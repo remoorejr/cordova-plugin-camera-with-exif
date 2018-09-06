@@ -766,9 +766,14 @@ private void processResultFromGallery(int destType, Intent intent) {
     String fileLocation = FileHelper.getRealPath(uri, this.cordova);
     Log.d(LOG_TAG, "File location is: " + fileLocation);
 
-    // If you ask for video or all media type you will automatically get back a file URI
+    String uriString = uri.toString();
+
+    // Get the path to the image. Makes loading so much easier.
+    String mimeType = FileHelper.getMimeType(uriString, this.cordova);
+
+    // If you selected a video you will automatically get back a file URI
     // and there will be no attempt to resize any returned data
-    if (this.mediaType != PICTURE) {
+    if (!("image/jpeg".equalsIgnoreCase(mimeType) || "image/png".equalsIgnoreCase(mimeType))) {
 
         resultObj.filename = fileLocation;
         resultObj.json_metadata = "{}";
@@ -835,11 +840,6 @@ private void processResultFromGallery(int destType, Intent intent) {
             this.callbackContext.success(jsonResult);
 
         } else {
-
-            String uriString = uri.toString();
-
-            // Get the path to the image. Makes loading so much easier.
-            String mimeType = FileHelper.getMimeType(uriString, this.cordova);
             // If we don't have a valid image, quit.
             if (!("image/jpeg".equalsIgnoreCase(mimeType) || "image/png".equalsIgnoreCase(mimeType))) {
                 Log.d(LOG_TAG, "I either have a null image path or bitmap");
