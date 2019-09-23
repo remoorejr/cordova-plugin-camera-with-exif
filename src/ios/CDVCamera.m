@@ -469,7 +469,8 @@ static NSString* toBase64(NSData* data) {
         case DestinationTypeFileUri: {
             
             image = [self retrieveImage:info options:options];
-            NSData* data = [self processImage:image info:info options:options];
+            __block NSData* data = [self processImage:image info:info options:options];
+
             if (data) {
                 
                 NSString* extension = options.encodingType == EncodingTypePNG? @"png" : @"jpg";
@@ -534,12 +535,15 @@ static NSString* toBase64(NSData* data) {
                             if (self.metadata){
                             
                                 // add metadata to image that is written to temp file
+                                // iOS 13 fix applied 9-23-2019, re; vlinde fork
+                                // see: https://github.com/vlinde/cordova-plugin-camera-with-exif/blob/master/src/ios/CDVCamera.m
+                                CGImageRef imageRef = image.CGImage;
                             
                                 CGImageSourceRef sourceImage = CGImageSourceCreateWithData((__bridge_retained CFDataRef)self.data, NULL);
                                 CFStringRef sourceType = CGImageSourceGetType(sourceImage);
         
                                 CGImageDestinationRef destinationImage = CGImageDestinationCreateWithData((__bridge CFMutableDataRef)self.data, sourceType, 1, NULL);
-                                CGImageDestinationAddImageFromSource(destinationImage, sourceImage, 0, (__bridge CFDictionaryRef)self.metadata);
+                                CGImageDestinationAddImage(destinationImage , imageRef, (CFDictionaryRef)self.metadata);
         
                                 ok = CGImageDestinationFinalize(destinationImage);
         
@@ -833,12 +837,16 @@ static NSString* toBase64(NSData* data) {
     BOOL ok = NO;
     
     if (self.metadata) {
+        // iOS 13 fix applied 9-23-2019, re; vlinde fork
+        // see: https://github.com/vlinde/cordova-plugin-camera-with-exif/blob/master/src/ios/CDVCamera.m
+        UIImage *image = [UIImage imageWithData:self.data];
+        CGImageRef imageRef = image.CGImage;
     
         CGImageSourceRef sourceImage = CGImageSourceCreateWithData((__bridge_retained CFDataRef)self.data, NULL);
         CFStringRef sourceType = CGImageSourceGetType(sourceImage);
-        
         CGImageDestinationRef destinationImage = CGImageDestinationCreateWithData((__bridge CFMutableDataRef)self.data, sourceType, 1, NULL);
-        CGImageDestinationAddImageFromSource(destinationImage, sourceImage, 0, (__bridge CFDictionaryRef)self.metadata);
+        
+        CGImageDestinationAddImage(destinationImage, imageRef, (CFDictionaryRef)self.metadata);
         
         ok = CGImageDestinationFinalize(destinationImage);
         
@@ -995,6 +1003,11 @@ static NSString* toBase64(NSData* data) {
 + (instancetype) createFromPictureOptions:(CDVPictureOptions*)pictureOptions;
 {
     CDVCameraPicker* cameraPicker = [[CDVCameraPicker alloc] init];
+    
+    // modal fix, iOS 13 applied 9-23-2019, re; vlinde fork
+    // see: https://github.com/vlinde/cordova-plugin-camera-with-exif/blob/master/src/ios/CDVCamera.m
+    cameraPicker.modalPresentationStyle = UIModalPresentationFullScreen; 
+    
     cameraPicker.pictureOptions = pictureOptions;
     cameraPicker.sourceType = pictureOptions.sourceType;
     cameraPicker.allowsEditing = pictureOptions.allowsEditing;
