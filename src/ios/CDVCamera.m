@@ -511,6 +511,7 @@ static NSString* toBase64(NSData* data) {
                             NSMutableDictionary *TIFFDictionary = [[metadata objectForKey:(NSString*)kCGImagePropertyTIFFDictionary]mutableCopy];
                             if (TIFFDictionary) {
                                 [self.metadata setObject:TIFFDictionary forKey:(NSString*)kCGImagePropertyTIFFDictionary];
+                                [[self.metadata valueForKey:(NSString*)kCGImagePropertyTIFFDictionary] removeObjectForKey:(NSString*)kCGImagePropertyTIFFOrientation];
                             }
                             
                             
