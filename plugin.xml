@@ -72,7 +72,7 @@
             <clobbers target="CameraPopoverHandle" />
         </js-module>
 
-         <preference name="ANDROID_SUPPORT_V4_VERSION" default="27.+"/>
+         <preference name="ANDROID_SUPPORT_V4_VERSION" default="28.+"/>
       
      </platform>
 
