@@ -65,14 +65,14 @@
         
         <source-file src="src/android/xml/camera_provider_paths.xml" target-dir="res/xml" />
         
-        <framework src="com.android.support:support-v4:$ANDROID_SUPPORT_V4_VERSION" />
+        <framework src="androidx.core:core:$ANDROIDX_CORE_VERSION" />
         <framework src="com.google.code.gson:gson:2.8.5" />
 
         <js-module src="www/CameraPopoverHandle.js" name="CameraPopoverHandle">
             <clobbers target="CameraPopoverHandle" />
         </js-module>
 
-         <preference name="ANDROID_SUPPORT_V4_VERSION" default="28.+"/>
+         <preference name="ANDROIDX_CORE_VERSION" default="1.2.0"/>
       
      </platform>
 
