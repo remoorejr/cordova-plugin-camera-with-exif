@@ -128,7 +128,7 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
     private boolean orientationCorrected;   // Has the picture's orientation been corrected
     private boolean allowEdit;              // Should we allow the user to crop the image.
 
-    protected final static String[] permissions = { Manifest.permission.CAMERA, Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE };
+    protected final static String[] permissions = { Manifest.permission.CAMERA, Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.ACCESS_MEDIA_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION };
 
     public CallbackContext callbackContext;
     private int numPics;
@@ -252,6 +252,15 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
         return cache.getAbsolutePath();
     }
 
+     private boolean hasPermission() {
+        for( String p : permissions) {
+            if (!PermissionHelper.hasPermission(this, p)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     /**
      * Take a picture with the camera.
      * When an image is captured or the camera view is cancelled, the result is returned
@@ -269,12 +278,8 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
 
      public void callTakePicture(int returnType, int encodingType) {
         
-        boolean saveAlbumPermission = PermissionHelper.hasPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) 
-            && PermissionHelper.hasPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE);
-
-        boolean takePicturePermission = PermissionHelper.hasPermission(this, Manifest.permission.CAMERA);
-        boolean accessLocationPermission = PermissionHelper.hasPermission(this, Manifest.permission.ACCESS_FINE_LOCATION);
-        
+      boolean takePicturePermission = PermissionHelper.hasPermission(this, Manifest.permission.CAMERA);
+             
         if (!takePicturePermission) {
             takePicturePermission = true;
             try {
@@ -294,17 +299,10 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
             }
         }
 
-        if (takePicturePermission && saveAlbumPermission && accessLocationPermission) {
+        if (hasPermission()) {
             takePicture(returnType, encodingType);
-        } else if (takePicturePermission && saveAlbumPermission && !accessLocationPermission) {
-            PermissionHelper.requestPermissions(this, TAKE_PIC_SEC, new String[]{Manifest.permission.ACCESS_MEDIA_LOCATION,Manifest.permission.ACCESS_FINE_LOCATION});
-        } else if (saveAlbumPermission && accessLocationPermission  && !takePicturePermission) {
-            PermissionHelper.requestPermission(this, TAKE_PIC_SEC, Manifest.permission.CAMERA);
-        } else if (!saveAlbumPermission && takePicturePermission && accessLocationPermission ) {
-            PermissionHelper.requestPermissions(this, TAKE_PIC_SEC,
-                    new String[]{Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE});
         } else {
-            PermissionHelper.requestPermissions(this, TAKE_PIC_SEC, permissions);
+            PermissionHelper.requestPermissions(this,0,permissions);
         }
     }
 
@@ -1496,14 +1494,16 @@ private void processResultFromGallery(int destType, Intent intent) {
     public void onRequestPermissionResult(int requestCode, String[] permissions,
                                           int[] grantResults) throws JSONException
     {
-        for(int r:grantResults)
-        {
-            if(r == PackageManager.PERMISSION_DENIED)
-            {
-                this.callbackContext.sendPluginResult(new PluginResult(PluginResult.Status.ERROR, PERMISSION_DENIED_ERROR));
-                return;
+        //user may not allow geotagging but allow that to pass through
+
+        for (int i = 0; i < permissions.length; i++) {
+             if ((grantResults[i] != PackageManager.PERMISSION_DENIED) || permissions[i].equals("android.permission.ACCESS_FINE_LOCATION")) {
+                continue;
             }
+            this.callbackContext.sendPluginResult(new PluginResult(PluginResult.Status.ERROR, PERMISSION_DENIED_ERROR));
+            return;
         }
+
         switch(requestCode)
         {
             case TAKE_PIC_SEC:
