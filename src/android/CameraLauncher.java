@@ -266,15 +266,15 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
      * @param encodingType      Compression quality hint (0-100: 0=low quality & high compression, 100=compress of max quality)
      * @param returnType        Set the type of image to return.
      */
-    public void callTakePicture(int returnType, int encodingType) {
+
+     public void callTakePicture(int returnType, int encodingType) {
+        
         boolean saveAlbumPermission = PermissionHelper.hasPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) 
-			&& PermissionHelper.hasPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE);
+            && PermissionHelper.hasPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE);
+
         boolean takePicturePermission = PermissionHelper.hasPermission(this, Manifest.permission.CAMERA);
-
-        // CB-10120: The CAMERA permission does not need to be requested unless it is declared
-        // in AndroidManifest.xml. This plugin does not declare it, but others may and so we must
-        // check the package info to determine if the permission is present.
-
+        boolean accessLocationPermission = PermissionHelper.hasPermission(this, Manifest.permission.ACCESS_FINE_LOCATION);
+        
         if (!takePicturePermission) {
             takePicturePermission = true;
             try {
@@ -293,18 +293,21 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
                 // never be caught
             }
         }
-        if (takePicturePermission && saveAlbumPermission) {
+
+        if (takePicturePermission && saveAlbumPermission && accessLocationPermission) {
             takePicture(returnType, encodingType);
-        } else if (saveAlbumPermission && !takePicturePermission) {
+        } else if (takePicturePermission && saveAlbumPermission && !accessLocationPermission) {
+            PermissionHelper.requestPermissions(this, TAKE_PIC_SEC, new String[]{Manifest.permission.ACCESS_MEDIA_LOCATION,Manifest.permission.ACCESS_FINE_LOCATION});
+        } else if (saveAlbumPermission && accessLocationPermission  && !takePicturePermission) {
             PermissionHelper.requestPermission(this, TAKE_PIC_SEC, Manifest.permission.CAMERA);
-        } else if (!saveAlbumPermission && takePicturePermission) {
+        } else if (!saveAlbumPermission && takePicturePermission && accessLocationPermission ) {
             PermissionHelper.requestPermissions(this, TAKE_PIC_SEC,
                     new String[]{Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE});
         } else {
             PermissionHelper.requestPermissions(this, TAKE_PIC_SEC, permissions);
         }
-       
     }
+
 
     public void takePicture(int returnType, int encodingType)
     {

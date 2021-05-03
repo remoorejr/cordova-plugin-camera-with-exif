@@ -147,3 +147,7 @@
 * Renamed test dir, added nested plugin.xml
 * CB-6958 added manual tests
 * CB-6958 Port camera tests to plugin-test-framework
+
+### 1.4.0 (May 03, 2021)
+* Modified Android permissions to allow access to lat/lon exif metadata.
+
