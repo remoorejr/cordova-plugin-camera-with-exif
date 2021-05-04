@@ -1497,7 +1497,7 @@ private void processResultFromGallery(int destType, Intent intent) {
         //user may not allow geotagging but allow that to pass through
 
         for (int i = 0; i < permissions.length; i++) {
-             if ((grantResults[i] != PackageManager.PERMISSION_DENIED) || permissions[i].equals("android.permission.ACCESS_FINE_LOCATION")) {
+             if ((grantResults[i] != PackageManager.PERMISSION_DENIED) || permissions[i].equals("android.permission.ACCESS_FINE_LOCATION")  || permissions[i].equals("android.permission.ACCESS_MEDIA_LOCATION") {
                 continue;
             }
             this.callbackContext.sendPluginResult(new PluginResult(PluginResult.Status.ERROR, PERMISSION_DENIED_ERROR));
