@@ -51,13 +51,26 @@
 
 static NSSet* org_apache_cordova_validArrowDirections;
 
+// 05-04-2021: updated toBase64, fixes issue #42, iOS crash while trying to decode base64  
 static NSString* toBase64(NSData* data) {
     SEL s1 = NSSelectorFromString(@"cdv_base64EncodedString");
     SEL s2 = NSSelectorFromString(@"base64EncodedString");
-    SEL realSel = [data respondsToSelector:s1] ? s1 : s2;
-    NSString* (*func)(id, SEL) = (void *)[data methodForSelector:realSel];
-    return func(data, realSel);
+    SEL s3 = NSSelectorFromString(@"base64EncodedStringWithOptions:");
+
+    if ([data respondsToSelector:s1]) {
+        NSString* (*func)(id, SEL) = (void *)[data methodForSelector:s1];
+        return func(data, s1);
+    } else if ([data respondsToSelector:s2]) {
+        NSString* (*func)(id, SEL) = (void *)[data methodForSelector:s2];
+        return func(data, s2);
+    } else if ([data respondsToSelector:s3]) {
+        NSString* (*func)(id, SEL, NSUInteger) = (void *)[data methodForSelector:s3];
+        return func(data, s3, 0);
+    } else {
+        return nil;
+    }
 }
+
 
 @implementation CDVPictureOptions
 
@@ -510,7 +523,12 @@ static NSString* toBase64(NSData* data) {
                             
                             NSMutableDictionary *TIFFDictionary = [[metadata objectForKey:(NSString*)kCGImagePropertyTIFFDictionary]mutableCopy];
                             if (TIFFDictionary) {
-                                [self.metadata setObject:TIFFDictionary forKey:(NSString*)kCGImagePropertyTIFFDictionary];
+                                // 05-04-2021: re; incorrect image orientation 
+                                // [self.metadata setObject:TIFFDictionary forKey:(NSString*)kCGImagePropertyTIFFDictionary];
+                                
+                                //remove orientation from exif data when image comes from photo library
+                                [[self.metadata valueForKey:(NSString*)kCGImagePropertyTIFFDictionary] removeObjectForKey:(NSString*)kCGImagePropertyTIFFOrientation];
+
                             }
                             
                             
@@ -841,8 +859,12 @@ static NSString* toBase64(NSData* data) {
         // see: https://github.com/vlinde/cordova-plugin-camera-with-exif/blob/master/src/ios/CDVCamera.m
         UIImage *image = [UIImage imageWithData:self.data];
         CGImageRef imageRef = image.CGImage;
+
+        //05-04-2021: iOS 14 fix, correctly append exif, See: https://github.com/apache/cordova-plugin-camera/pull/685 
     
-        CGImageSourceRef sourceImage = CGImageSourceCreateWithData((__bridge_retained CFDataRef)self.data, NULL);
+        NSData* dataCopy = [self.data mutableCopy];
+        CGImageSourceRef sourceImage = CGImageSourceCreateWithData((__bridge CFDataRef)dataCopy, NULL);
+
         CFStringRef sourceType = CGImageSourceGetType(sourceImage);
         CGImageDestinationRef destinationImage = CGImageDestinationCreateWithData((__bridge CFMutableDataRef)self.data, sourceType, 1, NULL);
         
@@ -859,6 +881,7 @@ static NSString* toBase64(NSData* data) {
         }
         #endif
         
+        dataCopy = nil;
         CFRelease(sourceImage);
         CFRelease(destinationImage);
         
