@@ -10,13 +10,14 @@ The Camera.Destination must be set to FILE_URI and the build must be for Android
 
 This plugin is tightly integrated within the [Alpha Anywhere](http://www.alphasoftware.com) PhoneGap App Builder. Alpha Anywhere is a Rapid Mobile Application Development and Deployment platform.
 
+## Required Cordova Versions
+All version 1.4.x and > versions of this plugin REQUIRE Cordova 10.0.0 or > and cordova-android 9.0 or greater.
+
+For Cordova versions < 10.0.0, install version 1.3.1 of this plugin however, newer Android devices will NOT include lat/lon exif metadata due to updated permission requirements.
+
 ## Installation
-    cordova plugin add cordova-plugin-camera-with-exif
-
-## PhoneGap Build plugin installation
-    Add to config.xml:
-    <gap:plugin name="cordova-plugin-camera-with-exif" source="npm"/>
-
+    To install the latest version: cordova plugin add cordova-plugin-camera-with-exif
+    To install version 1.3.1: cordova plugin add cordova-plugin-camera-with-exif@1.3.1 
 
 ## navigator.camera.getPicture
 
@@ -68,15 +69,9 @@ than `DATA_URL`.
 
 ### Supported Platforms
 
-- Amazon Fire OS
 - Android
-- BlackBerry 10
 - Browser
-- Firefox OS
 - iOS
-- Tizen
-- Windows Phone 7 and 8
-- Windows 8
 
 ### Preferences (iOS)
 
@@ -87,15 +82,6 @@ than `DATA_URL`.
 Note: this preference is not required with this plugin. It is assumed that the only reason that you are using this plugin is to get geolocation and exif data. If present, this preference has no effect on this plugin.
 
 
-
-
-
-### Amazon Fire OS Quirks
-
-Amazon Fire OS uses intents to launch the camera activity on the device to capture
-images, and on phones with low memory, the Cordova activity may be killed.  In this
-scenario, the image may not appear when the cordova activity is restored.
-
 ### Android Quirks
 
 Android uses intents to launch the camera activity on the device to capture
@@ -105,10 +91,6 @@ scenario, the image may not appear when the Cordova activity is restored.
 ### Browser Quirks
 
 Can only return photos as base64-encoded image.
-
-### Firefox OS Quirks
-
-Camera plugin is currently implemented using [Web Activities](https://hacks.mozilla.org/2013/01/introducing-web-activities/). 
 
 ### iOS Quirks
 
@@ -141,16 +123,6 @@ displays:
         // do your thing here!
     }, 0);
 
-### Windows Phone 7 Quirks
-
-Invoking the native camera application while the device is connected
-via Zune does not work, and triggers an error callback.
-
-### Tizen Quirks
-
-Tizen only supports a `destinationType` of
-`Camera.DestinationType.FILE_URI` and a `sourceType` of
-`Camera.PictureSourceType.PHOTOLIBRARY`.
 
 ### Example
 
@@ -259,13 +231,6 @@ Optional parameters to customize the camera settings.
             FRONT : 1      // Use the front-facing camera
         };
 
-### Amazon Fire OS Quirks
-
-- Any `cameraDirection` value results in a back-facing photo.
-
-- Ignores the `allowEdit` parameter.
-
-- `Camera.PictureSourceType.PHOTOLIBRARY` and `Camera.PictureSourceType.SAVEDPHOTOALBUM` both display the same photo album.
 
 ### Android Quirks
 
@@ -275,62 +240,12 @@ Optional parameters to customize the camera settings.
 
 - `Camera.PictureSourceType.PHOTOLIBRARY` and `Camera.PictureSourceType.SAVEDPHOTOALBUM` both display the same photo album.
 
-### BlackBerry 10 Quirks
-
-- Ignores the `quality` parameter.
-
-- Ignores the `allowEdit` parameter.
-
-- `Camera.MediaType` is not supported.
-
-- Ignores the `correctOrientation` parameter.
-
-- Ignores the `cameraDirection` parameter.
-
-### Firefox OS Quirks
-
-- Ignores the `quality` parameter.
-
-- `Camera.DestinationType` is ignored and equals `1` (image file URI)
-
-- Ignores the `allowEdit` parameter.
-
-- Ignores the `PictureSourceType` parameter (user chooses it in a dialog window)
-
-- Ignores the `encodingType`
-
-- Ignores the `targetWidth` and `targetHeight`
-
-- `Camera.MediaType` is not supported.
-
-- Ignores the `correctOrientation` parameter.
-
-- Ignores the `cameraDirection` parameter.
 
 ### iOS Quirks
 
 - Set `quality` below 50 to avoid memory errors on some devices.
 
 - When using `destinationType.FILE_URI`, photos are saved in the application's temporary directory. The contents of the application's temporary directory is deleted when the application ends.
-
-### Tizen Quirks
-
-- options not supported
-
-- always returns a FILE URI
-
-### Windows Phone 7 and 8 Quirks
-
-- Ignores the `allowEdit` parameter.
-
-- Ignores the `correctOrientation` parameter.
-
-- Ignores the `cameraDirection` parameter.
-
-- Ignores the `saveToPhotoAlbum` parameter.  IMPORTANT: All images taken with the wp7/8 cordova camera API are always copied to the phone's camera roll.  Depending on the user's settings, this could also mean the image is auto-uploaded to their OneDrive.  This could potentially mean the image is available to a wider audience than your app intended.  If this a blocker for your application, you will need to implement the CameraCaptureTask as documented on msdn : [http://msdn.microsoft.com/en-us/library/windowsphone/develop/hh394006.aspx](http://msdn.microsoft.com/en-us/library/windowsphone/develop/hh394006.aspx)
-You may also comment or up-vote the related issue in the [issue tracker](https://issues.apache.org/jira/browse/CB-2083)
-
-- Ignores the `mediaType` property of `cameraOptions` as the Windows Phone SDK does not provide a way to choose videos from PHOTOLIBRARY.
 
 
 ## CameraError
