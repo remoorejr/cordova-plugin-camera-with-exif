@@ -23,7 +23,7 @@ import java.io.IOException;
 import android.media.ExifInterface;
 
 public class ExifHelper {
-    
+
 
      private String aperture = null;
      private String datetime = null;
@@ -72,19 +72,18 @@ public class ExifHelper {
     /**
      * Reads all the EXIF data from the input file.
      */
-    public void readExifData() {
+     public void readExifData() {
+        float[] latLng = new float[2];
+        inFile.getLatLong(latLng);
+        this.gpsLatitude = String.valueOf(latLng[0]);
+        this.gpsLongitude = String.valueOf(latLng[1]);
+        this.gpsAltitude = String.valueOf(inFile.getAltitude(0));
         this.aperture = inFile.getAttribute(ExifInterface.TAG_APERTURE);
         this.datetime = inFile.getAttribute(ExifInterface.TAG_DATETIME);
         this.exposureTime = inFile.getAttribute(ExifInterface.TAG_EXPOSURE_TIME);
         this.flash = inFile.getAttribute(ExifInterface.TAG_FLASH);
         this.focalLength = inFile.getAttribute(ExifInterface.TAG_FOCAL_LENGTH);
-        this.gpsAltitude = inFile.getAttribute(ExifInterface.TAG_GPS_ALTITUDE);
-        this.gpsAltitudeRef = inFile.getAttribute(ExifInterface.TAG_GPS_ALTITUDE_REF);
         this.gpsDateStamp = inFile.getAttribute(ExifInterface.TAG_GPS_DATESTAMP);
-        this.gpsLatitude = inFile.getAttribute(ExifInterface.TAG_GPS_LATITUDE);
-        this.gpsLatitudeRef = inFile.getAttribute(ExifInterface.TAG_GPS_LATITUDE_REF);
-        this.gpsLongitude = inFile.getAttribute(ExifInterface.TAG_GPS_LONGITUDE);
-        this.gpsLongitudeRef = inFile.getAttribute(ExifInterface.TAG_GPS_LONGITUDE_REF);
         this.gpsProcessingMethod = inFile.getAttribute(ExifInterface.TAG_GPS_PROCESSING_METHOD);
         this.gpsTimestamp = inFile.getAttribute(ExifInterface.TAG_GPS_TIMESTAMP);
         this.iso = inFile.getAttribute(ExifInterface.TAG_ISO);
