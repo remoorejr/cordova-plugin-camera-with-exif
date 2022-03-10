@@ -319,7 +319,7 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
         File photo = createCaptureFile(encodingType);
         
         this.imageUri = new CordovaUri(FileProvider.getUriForFile(cordova.getActivity(),
-                applicationId + ".provider",
+                applicationId + ".camera.provider",
                 photo));
 
          intent.putExtra(android.provider.MediaStore.EXTRA_OUTPUT, imageUri.getCorrectUri());
@@ -968,7 +968,7 @@ private void processResultFromGallery(int destType, Intent intent) {
                 try {
                     if(this.allowEdit) {
                        Uri tmpFile = FileProvider.getUriForFile(cordova.getActivity(),
-                                applicationId + ".provider",
+                                applicationId + ".camera.provider",
                                 createCaptureFile(this.encodingType));
                         performCrop(tmpFile, destType, intent); 
                     }
