@@ -20,6 +20,7 @@
 */
 package org.apache.cordova.camera;
 
+import java.lang.SecurityException;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -1397,7 +1398,14 @@ private void processResultFromGallery(int destType, Intent intent) {
                 id--;
             }
             Uri uri = Uri.parse(contentStore + "/" + id);
-            this.cordova.getActivity().getContentResolver().delete(uri, null, null);
+            // Note: 08-31-22 works around a permission problem when deleting duplicate images
+            // For more information and other approaches refer to apache#679
+            try {
+                 this.cordova.getActivity().getContentResolver().delete(uri, null, null);
+            } catch (SecurityException e) {
+                LOG.d("Handled security error while trying to delete duplicate image. Probable cause is missing permissions")
+            }
+           
             cursor.close();
         }
     }
