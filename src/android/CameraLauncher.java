@@ -1404,7 +1404,7 @@ private void processResultFromGallery(int destType, Intent intent) {
             try {
                  this.cordova.getActivity().getContentResolver().delete(uri, null, null);
             } catch (SecurityException e) {
-                LOG.d("Handled security error while trying to delete duplicate image. Probable cause is missing permissions");
+                Log.d(LOG_TAG,"Handled security error while trying to delete duplicate image. Probable cause is missing permissions");
             }
            
             cursor.close();
