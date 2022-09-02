@@ -88,7 +88,14 @@ public class FileHelper {
                 final String type = split[0];
 
                 if ("primary".equalsIgnoreCase(type)) {
-                    return Environment.getExternalStorageDirectory() + "/" + split[1];
+                  if (split.length > 1) {
+                    return Environment.getExternalStorageDirectory().toString() + "/" + split[1];
+                  } else {
+                    return Environment.getExternalStorageDirectory().toString() + "/";
+                  }
+                  // This is for checking SD Card
+                } else {
+                  return "storage" + "/" + docId.replace(":", "/");
                 }
 
                 // TODO handle non-primary volumes
