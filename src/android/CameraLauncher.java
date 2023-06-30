@@ -50,6 +50,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.content.ContentValues;
@@ -130,7 +131,7 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
     private boolean orientationCorrected;   // Has the picture's orientation been corrected
     private boolean allowEdit;              // Should we allow the user to crop the image.
 
-    protected final static String[] permissions = { Manifest.permission.CAMERA, Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.ACCESS_MEDIA_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION };
+    // protected final static String[] permissions = { Manifest.permission.CAMERA, Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.ACCESS_MEDIA_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION };
 
     public CallbackContext callbackContext;
     private int numPics;
@@ -209,8 +210,9 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
                 }
                 else if ((this.srcType == PHOTOLIBRARY) || (this.srcType == SAVEDPHOTOALBUM)) {
                     // FIXME: Stop always requesting the permission
-                    if(!PermissionHelper.hasPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE)) {
-                        PermissionHelper.requestPermission(this, SAVE_TO_ALBUM_SEC, Manifest.permission.READ_EXTERNAL_STORAGE);
+                    String[] permissions = getPermissions(true, mediaType);
+                    if(!hasPermissions(permissions)) {
+                        PermissionHelper.requestPermissions(this, SAVE_TO_ALBUM_SEC, permissions);
                     } else {
                         this.getImage(this.srcType, destType, encodingType);
                     }
@@ -237,6 +239,37 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
     // LOCAL METHODS
     //--------------------------------------------------------------------------
 
+    private String[] getPermissions(boolean storageOnly, int mediaType) {
+        if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (storageOnly) {
+                switch (mediaType) {
+                    case PICTURE:
+                        return new String[]{ Manifest.permission.READ_MEDIA_IMAGES, Manifest.permission.ACCESS_MEDIA_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION };
+                    case VIDEO:
+                        return new String[]{ Manifest.permission.READ_MEDIA_VIDEO, Manifest.permission.ACCESS_MEDIA_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION };
+                    default:
+                        return new String[]{ Manifest.permission.READ_MEDIA_IMAGES, Manifest.permission.READ_MEDIA_VIDEO, Manifest.permission.ACCESS_MEDIA_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION };
+                }
+            }
+            else {
+                switch (mediaType) {
+                    case PICTURE:
+                        return new String[]{ Manifest.permission.CAMERA, Manifest.permission.CAMERA, Manifest.permission.READ_MEDIA_IMAGES, Manifest.permission.ACCESS_MEDIA_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION };
+                    case VIDEO:
+                        return new String[]{ Manifest.permission.CAMERA, Manifest.permission.READ_MEDIA_VIDEO, Manifest.permission.ACCESS_MEDIA_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION };
+                    default:
+                        return new String[]{ Manifest.permission.CAMERA, Manifest.permission.READ_MEDIA_IMAGES, Manifest.permission.READ_MEDIA_VIDEO, Manifest.permission.ACCESS_MEDIA_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION };
+                }
+            }
+        } else {
+            if (storageOnly) {
+                return new String[]{ Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.ACCESS_MEDIA_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION };
+            } else {
+                return new String[]{ Manifest.permission.CAMERA, Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.ACCESS_MEDIA_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION };
+            }
+        }
+    }
+	
     private String getTempDirectoryPath() {
         File cache = null;
 
@@ -278,9 +311,16 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
      * @param returnType        Set the type of image to return.
      */
 
-     public void callTakePicture(int returnType, int encodingType) {
-        
-      boolean takePicturePermission = PermissionHelper.hasPermission(this, Manifest.permission.CAMERA);
+     public void callTakePicture(int returnType, int encodingType) {	
+	String[] storagePermissions = getPermissions(true, mediaType);
+        boolean saveAlbumPermission;
+        if (this.saveToPhotoAlbum) {
+            saveAlbumPermission = hasPermissions(storagePermissions);
+        } else {
+            saveAlbumPermission = true;
+        }
+	     
+      	boolean takePicturePermission = PermissionHelper.hasPermission(this, Manifest.permission.CAMERA);
              
         if (!takePicturePermission) {
             takePicturePermission = true;
@@ -301,11 +341,22 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
             }
         }
 
+ 	if (takePicturePermission && saveAlbumPermission) {
+            takePicture(returnType, encodingType);
+        } else if (saveAlbumPermission) {
+            PermissionHelper.requestPermission(this, TAKE_PIC_SEC, Manifest.permission.CAMERA);
+        } else if (takePicturePermission) {
+            PermissionHelper.requestPermissions(this, TAKE_PIC_SEC, storagePermissions);
+        } else {
+            PermissionHelper.requestPermissions(this, TAKE_PIC_SEC, getPermissions(false, mediaType));
+        }
+	/*
         if (hasPermission()) {
             takePicture(returnType, encodingType);
         } else {
             PermissionHelper.requestPermissions(this,0,permissions);
         }
+	*/
     }
 
 
@@ -1394,6 +1445,7 @@ private void processResultFromGallery(int destType, Intent intent) {
         // delete the duplicate file if the difference is 2 for file URI or 1 for Data URL
         if ((currentNumOfImages - numPics) == diff) {
             cursor.moveToLast();
+            @SuppressLint("Range")
             int id = Integer.valueOf(cursor.getString(cursor.getColumnIndex(MediaStore.Images.Media._ID)));
             if (diff == 2) {
                 id--;
@@ -1599,5 +1651,13 @@ private void processResultFromGallery(int destType, Intent intent) {
         return path;
 
     }
-
+	
+    private boolean hasPermissions(String[] permissions) {
+        for (String permission: permissions) {
+            if (!PermissionHelper.hasPermission(this, permission)) {
+                return false;
+            }
+        }
+        return true;
+    }
 }
