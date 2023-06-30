@@ -16,10 +16,12 @@
        specific language governing permissions and limitations
        under the License.
 
-       Last revision: 08-01-2019 : revised to copy cloud images to temp location, return local filename
+       revision: 08-01-2019 : revised to copy cloud images to temp location, return local filename
+       revision: 09-01-2022 : added try/catch to delete in checkForDuplicateImage, was causing a crash on Lenovo Tablets with stock camera app
 */
 package org.apache.cordova.camera;
 
+import java.lang.SecurityException;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -1397,7 +1399,14 @@ private void processResultFromGallery(int destType, Intent intent) {
                 id--;
             }
             Uri uri = Uri.parse(contentStore + "/" + id);
-            this.cordova.getActivity().getContentResolver().delete(uri, null, null);
+            // Note: 08-31-22 works around a permission problem when deleting duplicate images
+            // For more information and other approaches refer to apache#679
+            try {
+                 this.cordova.getActivity().getContentResolver().delete(uri, null, null);
+            } catch (SecurityException e) {
+                Log.d(LOG_TAG,"Handled security error while trying to delete duplicate image. Probable cause is missing permissions");
+            }
+           
             cursor.close();
         }
     }
