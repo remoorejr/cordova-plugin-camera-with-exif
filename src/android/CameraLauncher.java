@@ -240,7 +240,7 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
     //--------------------------------------------------------------------------
 
     private String[] getPermissions(boolean storageOnly, int mediaType) {
-        if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
             if (storageOnly) {
                 switch (mediaType) {
                     case PICTURE:
@@ -285,15 +285,6 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
         // Create the cache directory if it doesn't exist
         cache.mkdirs();
         return cache.getAbsolutePath();
-    }
-
-     private boolean hasPermission() {
-        for( String p : permissions) {
-            if (!PermissionHelper.hasPermission(this, p)) {
-                return false;
-            }
-        }
-        return true;
     }
 
     /**
