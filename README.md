@@ -11,9 +11,9 @@ This plugin is tightly integrated within the [Alpha Anywhere](http://www.alphaso
 
 ## Required Cordova Versions
 
-Version 1.5.2 includes changes for Android only that require Cordova 12, Cordova Android 12 and require you to use API level 33.
+Version 1.5.3 includes changes for Android only that require Cordova 12, Cordova Android 12 and require you to use API level 33.
 
-If you are targeting an Android build with an API level less than 33, then install version 1.5.1 of this plugin.
+If you are targeting an Android build with an API level less than 33, you can install version 1.5.1 of this plugin.
 
 All version 1.4.x through 1.5.1 versions of this plugin REQUIRE Cordova 10.x.x or Cordova 11.x.x and cordova-android 9.0 through cordova-android 11.x.x.
 
@@ -29,7 +29,7 @@ For Cordova versions < 10.0.0, install version 1.3.1 of this plugin however, new
     From the GitHub repo:
     To install the latest version: cordova plugin add https://github.com/remoorejr/cordova-plugin-camera-with-exif.git
     To install version 1.5.1: cordova plugin add https://github.com/remoorejr/cordova-plugin-camera-with-exif.git #1.5.1
-    To install version 1.5.2: cordova plugin add https://github.com/remoorejr/cordova-plugin-camera-with-exif.git #1.5.2
+    To install version 1.5.3: cordova plugin add https://github.com/remoorejr/cordova-plugin-camera-with-exif.git #1.5.3
 
 ## navigator.camera.getPicture
 
