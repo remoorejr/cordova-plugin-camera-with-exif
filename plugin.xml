@@ -3,7 +3,7 @@
 <plugin xmlns="http://apache.org/cordova/ns/plugins/1.0"
     xmlns:android="http://schemas.android.com/apk/res/android"
     id="cordova-plugin-camera-with-exif"
-    version="1.5.1">
+    version="1.5.3">
 
     <name>cordova-plugin-camera-with-exif</name>
     <description>
@@ -16,8 +16,9 @@
     <repo>https://github.com/remoorejr/cordova-plugin-camera-with-exif.git</repo>
 
     <engines>
-       <engine name="cordova" version=">=7.1.0" />
-       <engine name="cordova-android" version=">=6.3.0" />
+       <engine name="cordova" version=">=12.0.0" />
+       <engine name="cordova-android" version=">=12.0.0" />
+        <engine name="cordova-ios" version=">=5.1.0" />
     </engines>
 
     <js-module src="www/CameraConstants.js" name="Camera">
@@ -42,6 +43,7 @@
         <config-file target="AndroidManifest.xml" parent="/*">
             <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
             <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+            <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
             <uses-permission android:name="android.permission.ACCESS_MEDIA_LOCATION" />
 	    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
 	    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" android:minSdkVersion="33" />
