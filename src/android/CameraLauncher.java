@@ -257,6 +257,9 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
 
      private String[] getPermissions(boolean storageOnly, int mediaType) {
         ArrayList<String> permissions = new ArrayList<>();
+
+        // 10/02/2024 removed video permission for apps that do not require video
+        // temp workaround for this issue
         
         if (android.os.Build.VERSION.SDK_INT >= 33) {
             // Android API 33 and higher
@@ -264,12 +267,8 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
                 case PICTURE:
                     permissions.add(Manifest.permission.READ_MEDIA_IMAGES);
                     break;
-                case VIDEO:
-                    permissions.add(Manifest.permission.READ_MEDIA_VIDEO);
-                    break;
                 default:
                     permissions.add(Manifest.permission.READ_MEDIA_IMAGES);
-                    permissions.add(Manifest.permission.READ_MEDIA_VIDEO);
                     break;
             }
         } else {

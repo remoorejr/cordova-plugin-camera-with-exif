@@ -21,6 +21,9 @@
 
 # Release Notes
 
+## 1.5.4 (October 2, 2024)
+- removed permission to read video files per request of Justin Taylor, temp fix.
+
 ### 1.5.3 (September 12, 2023)
 - bump version
 - simplify and fix permission request code to call camera or get image after initial permission is granted

@@ -1,5 +1,8 @@
 ## cordova-plugin-camera-with-exif
 
+This 1.5.4 version does not request permission to read video files.
+This is in response to a request from a developer that only requires access to photos.
+
 This plugin is an enhanced version of the stock cordova-plugin-camera which provides an API for taking pictures and for choosing images from
 the system's image library.
 
@@ -11,7 +14,7 @@ This plugin is tightly integrated within the [Alpha Anywhere](http://www.alphaso
 
 ## Required Cordova Versions
 
-Version 1.5.3 includes changes for Android only that require Cordova 12, Cordova Android 12 and require you to use API level 33.
+Version 1.5.4 includes changes for Android only that require Cordova 12, Cordova Android 12 and require you to use API level 33.
 
 If you are targeting an Android build with an API level less than 33, you can install version 1.5.1 of this plugin.
 
