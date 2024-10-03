@@ -11,6 +11,8 @@ This plugin is tightly integrated within the [Alpha Anywhere](http://www.alphaso
 
 ## Required Cordova Versions
 
+This version (1.5.5) does not request Android read permissions : EXPERIMENTAL
+
 Version 1.5.3 includes changes for Android only that require Cordova 12, Cordova Android 12 and require you to use API level 33.
 
 If you are targeting an Android build with an API level less than 33, you can install version 1.5.1 of this plugin.
