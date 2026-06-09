@@ -1,13 +1,12 @@
 ## cordova-plugin-camera-with-exif
 
-This plugin is an enhanced version of the stock cordova-plugin-camera which provides an API for taking pictures and for choosing images from
-the system's image library.
+This plugin is an enhanced version of the stock cordova-plugin-camera which provides an API for taking pictures and for choosing images from the system's image library.
 
 It has been modified to extract EXIF and GPS data from all images returned from the either the camera or the image galleries on Android and iOS devices. The image file name and the image metadata (exif,gps) is returned as a JSON string, which needs to be parsed.
 
 The Camera.Destination must be set to FILE_URI and the build must be for Android or iOS to in order for this plugin to work as described above. It will behave as the stock camera plugin in all other cases, returning the image only for all devices.
 
-This plugin is tightly integrated within the [Alpha Anywhere](http://www.alphasoftware.com) PhoneGap App Builder. Alpha Anywhere is a Rapid Mobile Application Development and Deployment platform.
+This plugin is tightly integrated within the [Alpha Anywhere](http://www.alphasoftware.com) Cordova App Builder. Alpha Anywhere is a Rapid Mobile Application Development and Deployment platform.
 
 ## Required Cordova Versions
 
