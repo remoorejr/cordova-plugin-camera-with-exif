@@ -123,7 +123,7 @@
             <framework src="ImageIO.framework" weak="true" />
             <framework src="CoreLocation.framework" />
             <framework src="CoreGraphics.framework" />
-            <framework src="AssetsLibrary.framework" />
+            <framework src="Photos.framework" />
             <framework src="MobileCoreServices.framework" />
             <framework src="CoreGraphics.framework" />
             <framework src="CoreImage.framework" />
@@ -135,6 +135,10 @@
 
             <config-file target="*-Info.plist" parent="NSPhotoLibraryUsageDescription">
                 <string>This app requires access to the photo library to display images.</string>
+            </config-file>
+
+            <config-file target="*-Info.plist" parent="NSPhotoLibraryAddUsageDescription">
+                <string>This app requires access to save photos to the photo library.</string>
             </config-file>
 
             <config-file target="*-Info.plist" parent="NSLocationWhenInUseUsageDescription">
