@@ -21,6 +21,13 @@
 
 # Release Notes
 
+### Unreleased
+
+- iOS: replace AssetsLibrary with PhotoKit to avoid the `setIsBackingALAssetsLibrary:` exception when selecting photos on iOS 27.2.
+- Read library metadata asynchronously, including iCloud assets, and return the selected file even when metadata is unavailable.
+- Preserve the `filename` / `json_metadata` response and clear camera state after asynchronous completion.
+- Use PhotoKit for saving photos and checking library permissions, including limited access.
+
 ### 1.5.3 (September 12, 2023)
 - bump version
 - simplify and fix permission request code to call camera or get image after initial permission is granted

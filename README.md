@@ -109,7 +109,12 @@ With the release of iOS 10 it became mandatory to add a `NSCameraUsageDescriptio
 
 - `NSCameraUsageDescription` describes the reason the app requires access to the camera.
 - `NSPhotoLibraryUsageDescription` describes the reason the app requires access to the photo library.
+- `NSPhotoLibraryAddUsageDescription` describes the reason the app saves photos when `saveToPhotoAlbum` is enabled.
 - `NSLocationWhenInUseUsageDescription` describes the reason the app requires access to the devices location.
+
+Photo library access uses PhotoKit instead of AssetsLibrary. EXIF/GPS metadata is
+read asynchronously, with iCloud downloads enabled when needed. If metadata is
+unavailable, `FILE_URI` still returns the selected file with `json_metadata: "{}"`.
 
 When the system prompts the user to allow access, this string is displayed as part of the dialog box.
 
@@ -193,7 +198,7 @@ Optional parameters to customize the camera settings.
         Camera.DestinationType = {
             DATA_URL : 0,      // Return image as base64-encoded string
             FILE_URI : 1,      // Return image file URI
-            NATIVE_URI : 2     // Return image native URI (e.g., assets-library:// on iOS or content:// on Android)
+            NATIVE_URI : 2     // Return image native URI (file:// on iOS or content:// on Android)
         };
 
 - **sourceType**: Set the source of the picture. The default is CAMERA. Defined in `navigator.camera.PictureSourceType` _(Number)_
