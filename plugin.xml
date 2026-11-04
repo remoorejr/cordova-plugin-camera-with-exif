@@ -3,7 +3,7 @@
 <plugin xmlns="http://apache.org/cordova/ns/plugins/1.0"
     xmlns:android="http://schemas.android.com/apk/res/android"
     id="cordova-plugin-camera-with-exif"
-    version="1.5.6">
+    version="1.6.0">
 
     <name>cordova-plugin-camera-with-exif</name>
     <description>
@@ -89,10 +89,10 @@
  
         <source-file src="src/android/xml/camera_provider_paths.xml" target-dir="res/xml" />
 
-        <preference name="ANDROIDX_CORE_VERSION" default="1.6.+"/>
+        <preference name="ANDROIDX_CORE_VERSION" default="1.10.+"/>
         <framework src="androidx.core:core:$ANDROIDX_CORE_VERSION" />
         
-        <framework src="com.google.code.gson:gson:2.8.5" />
+        <framework src="com.google.code.gson:gson:2.11.0" />
 
         <js-module src="www/CameraPopoverHandle.js" name="CameraPopoverHandle">
             <clobbers target="CameraPopoverHandle" />

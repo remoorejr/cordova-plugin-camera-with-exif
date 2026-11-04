@@ -19,7 +19,13 @@
 package org.apache.cordova.camera;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
+import java.util.TimeZone;
 
+import android.location.Location;
 import android.media.ExifInterface;
 
 public class ExifHelper {
@@ -60,6 +66,17 @@ public class ExifHelper {
     }
 
     /**
+     * The image stream before it is compressed, requires no read permission when
+     * the stream is opened from a content URI that was granted to the app
+     *
+     * @param stream
+     * @throws IOException
+     */
+    public void createInStream(InputStream stream) throws IOException {
+        this.inFile = new ExifInterface(stream);
+    }
+
+    /**
      * The file after it has been compressed
      *
      * @param filePath
@@ -92,6 +109,21 @@ public class ExifHelper {
         this.model = inFile.getAttribute(ExifInterface.TAG_MODEL);
         this.orientation = inFile.getAttribute(ExifInterface.TAG_ORIENTATION);
         this.whiteBalance = inFile.getAttribute(ExifInterface.TAG_WHITE_BALANCE);
+
+        // Android zeros the location in library images when ACCESS_MEDIA_LOCATION isn't granted,
+        // don't return that as a location of 0,0
+        if (this.gpsLatitudeRef == null || this.gpsLatitudeRef.isEmpty()
+                || this.gpsLongitudeRef == null || this.gpsLongitudeRef.isEmpty()) {
+            this.gpsLatitude = null;
+            this.gpsLatitudeRef = null;
+            this.gpsLongitude = null;
+            this.gpsLongitudeRef = null;
+            this.gpsAltitude = null;
+            this.gpsAltitudeRef = null;
+            this.gpsDateStamp = null;
+            this.gpsProcessingMethod = null;
+            this.gpsTimestamp = null;
+        }
     }
 
 
@@ -167,7 +199,61 @@ public class ExifHelper {
         this.outFile.saveAttributes();
     }
 
+    public boolean hasLocation() {
+        return this.gpsLatitude != null && this.gpsLongitude != null;
+    }
+
+    /**
+     * Stores the location, call writeExifData to add it to the output file
+     *
+     * @param location
+     */
+    public void setLocation(Location location) {
+        double latitude = location.getLatitude();
+        double longitude = location.getLongitude();
+
+        this.gpsLatitude = toExifCoordinate(latitude);
+        this.gpsLatitudeRef = latitude < 0 ? "S" : "N";
+        this.gpsLongitude = toExifCoordinate(longitude);
+        this.gpsLongitudeRef = longitude < 0 ? "W" : "E";
+
+        if (location.hasAltitude()) {
+            double altitude = location.getAltitude();
+            this.gpsAltitude = Math.round(Math.abs(altitude) * 1000) + "/1000";
+            this.gpsAltitudeRef = altitude < 0 ? "1" : "0";
+        }
+
+        if (location.getProvider() != null) {
+            this.gpsProcessingMethod = location.getProvider().toUpperCase(Locale.ROOT);
+        }
+
+        Date time = new Date(location.getTime());
+        this.gpsDateStamp = formatUtc("yyyy:MM:dd", time);
+        this.gpsTimestamp = formatUtc("HH:mm:ss", time);
+    }
+
+    private static String formatUtc(String pattern, Date date) {
+        SimpleDateFormat formatter = new SimpleDateFormat(pattern, Locale.ROOT);
+        formatter.setTimeZone(TimeZone.getTimeZone("UTC"));
+        return formatter.format(date);
+    }
+
+    // EXIF stores coordinates as degrees, minutes and seconds rationals
+    private static String toExifCoordinate(double coordinate) {
+        double absolute = Math.abs(coordinate);
+        int degrees = (int) absolute;
+        double remainder = (absolute - degrees) * 60;
+        int minutes = (int) remainder;
+        long seconds = Math.round((remainder - minutes) * 60 * 10000);
+        return degrees + "/1," + minutes + "/1," + seconds + "/10000";
+    }
+
     public int getOrientation() {
+        // not all camera apps write the orientation tag
+        if (this.orientation == null) {
+            return 0;
+        }
+
         int o = Integer.parseInt(this.orientation);
 
         if (o == ExifInterface.ORIENTATION_NORMAL) {

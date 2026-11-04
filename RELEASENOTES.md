@@ -21,6 +21,27 @@
 
 # Release Notes
 
+### 1.6.0 (November 4, 2026)
+
+- bump version
+- Android: fix crash when choosing an image without read permissions
+- Android: fix crashes after taking a photo when the orientation tag is missing or the returned intent is null
+- Android: fix crash when returning a full quality cropped image
+- Android: read exif data from the image stream, no file access is needed
+- Android: json_metadata is now always valid JSON
+- Android: add the device location to camera images when the camera app doesn't, requests location permission
+- Android: request media location access for library images, shown as a request to access photos and videos
+- Android: return null GPS values when Android has removed the location, instead of 0,0
+- Android: images are still returned when location permissions are denied
+- Android: the filename can be a content:// URI on Android 13 or later when the file path can't be read
+- Android: fix sideways images when resizing without correctOrientation
+- Android: process camera images on a background thread
+- Android: return an error when no camera app is found
+- Android: read exif data from HEIC images
+- Android: only share the app's cache directories through the FileProvider
+- Android: update gson to 2.11.0 and androidx.core to 1.10
+- Tested on Android 8, 13 and 15 emulators using cordova-android 15
+
 ### 1.5.6 (November 4, 2026)
 
 - bump version

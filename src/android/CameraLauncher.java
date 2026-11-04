@@ -19,6 +19,7 @@
        revision: 08-01-2019 : revised to copy cloud images to temp location, return local filename
        revision: 09-01-2022 : added try/catch to delete in checkForDuplicateImage, was causing a crash on Lenovo Tablets with stock camera app
        revision: 08-08-2023 : new version 1.5.2: requires Android API Level 33 or >
+       revision: 11-04-2026 : read exif from the image stream, add location to camera images and request access to the location in library images
 */
 package org.apache.cordova.camera;
 
@@ -34,6 +35,9 @@ import java.io.OutputStream;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.cordova.BuildHelper;
 import org.apache.cordova.CallbackContext;
@@ -54,13 +58,18 @@ import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.ActivityNotFoundException;
+import android.content.ClipData;
 import android.content.ContentValues;
+import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.Bitmap.CompressFormat;
 import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
+import android.location.Location;
+import android.location.LocationListener;
+import android.location.LocationManager;
 import android.media.ExifInterface;
 import android.media.MediaScannerConnection;
 import android.media.MediaScannerConnection.MediaScannerConnectionClient;
@@ -68,9 +77,9 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.Looper;
 import android.provider.MediaStore;
 
-import androidx.annotation.RequiresApi;
 import androidx.core.content.FileProvider;
 import android.util.Base64;
 import android.util.Log;
@@ -84,8 +93,6 @@ import android.content.pm.PackageManager.NameNotFoundException;
  * displayed before
  * the camera view was shown is redisplayed.
  */
-@RequiresApi(api = Build.VERSION_CODES.TIRAMISU)
-
 public class CameraLauncher extends CordovaPlugin implements MediaScannerConnectionClient {
 
     private static final int DATA_URL = 0; // Return base64 encoded string
@@ -127,6 +134,9 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
     private static final int CROP_CAMERA = 100;
 
     private static final String TIME_FORMAT = "yyyyMMdd_HHmmss";
+
+    private static final long LOCATION_MAX_AGE = 2 * 60 * 1000; // use a known location if it's newer than this, ms
+    private static final long LOCATION_TIMEOUT = 5 * 1000; // how long to wait for a new location, ms
 
     private int mQuality; // Compression quality hint (0-100: 0=low quality & high compression,
                           // 100=compress of max quality)
@@ -227,8 +237,8 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
                     this.callTakePicture(destType, encodingType);
                 } else if ((this.srcType == PHOTOLIBRARY) || (this.srcType == SAVEDPHOTOALBUM)) {
 
-                    String[] permissions = getPermissions(true, mediaType);
-                    if (!hasPermissions(permissions)) {
+                    String[] permissions = getMissingPermissions(getPermissions(true, mediaType));
+                    if (permissions.length > 0) {
                         PermissionHelper.requestPermissions(this, SAVE_TO_ALBUM_SEC, permissions);
                     } else {
                         this.getImage(this.srcType, destType, encodingType);
@@ -272,6 +282,46 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
         return permissions.toArray(new String[0]);
     }
 
+    /**
+     * Permissions used to add location to the image's metadata. These are optional,
+     * the image is still returned if they're denied, without the location.
+     */
+    private String[] getLocationPermissions() {
+        if (this.srcType == CAMERA) {
+            if (this.encodingType == JPEG) {
+                return new String[] { Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION };
+            }
+        } else if (this.mediaType != VIDEO && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            return new String[] { Manifest.permission.ACCESS_MEDIA_LOCATION };
+        }
+        return new String[0];
+    }
+
+    private boolean isLocationPermission(String permission) {
+        return Manifest.permission.ACCESS_FINE_LOCATION.equals(permission)
+                || Manifest.permission.ACCESS_COARSE_LOCATION.equals(permission)
+                || Manifest.permission.ACCESS_MEDIA_LOCATION.equals(permission);
+    }
+
+    /**
+     * @param required permissions needed to continue
+     * @return the required and location permissions that haven't been granted
+     */
+    private String[] getMissingPermissions(String[] required) {
+        ArrayList<String> missing = new ArrayList<>();
+        for (String permission : required) {
+            if (!PermissionHelper.hasPermission(this, permission)) {
+                missing.add(permission);
+            }
+        }
+        for (String permission : getLocationPermissions()) {
+            if (!PermissionHelper.hasPermission(this, permission)) {
+                missing.add(permission);
+            }
+        }
+        return missing.toArray(new String[0]);
+    }
+
     private String getTempDirectoryPath() {
         File cache = null;
 
@@ -280,7 +330,7 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
             cache = cordova.getActivity().getExternalCacheDir();
         }
         // Use internal storage
-        else {
+        if (cache == null) {
             cache = cordova.getActivity().getCacheDir();
         }
 
@@ -352,21 +402,32 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
             }
         }
 
-        if (takePicturePermission && saveAlbumPermission) {
-            takePicture(returnType, encodingType);
-        } else if (saveAlbumPermission) {
-            PermissionHelper.requestPermission(this, TAKE_PIC_SEC, Manifest.permission.CAMERA);
-        } else if (takePicturePermission) {
-            PermissionHelper.requestPermissions(this, TAKE_PIC_SEC, storagePermissions);
+        ArrayList<String> required = new ArrayList<>();
+        if (!saveAlbumPermission) {
+            for (String permission : storagePermissions) {
+                required.add(permission);
+            }
+        }
+        if (!takePicturePermission) {
+            required.add(Manifest.permission.CAMERA);
+        }
+
+        String[] permissions = getMissingPermissions(required.toArray(new String[0]));
+        if (permissions.length > 0) {
+            PermissionHelper.requestPermissions(this, TAKE_PIC_SEC, permissions);
         } else {
-            PermissionHelper.requestPermissions(this, TAKE_PIC_SEC, getPermissions(false, mediaType));
+            takePicture(returnType, encodingType);
         }
     }
 
-   
+
     public void takePicture(int returnType, int encodingType) {
         // Save the number of images currently on disk for later
-        this.numPics = queryImgDB(whichContentStore()).getCount();
+        Cursor cursor = queryImgDB(whichContentStore());
+        this.numPics = cursor != null ? cursor.getCount() : 0;
+        if (cursor != null) {
+            cursor.close();
+        }
 
         // Let's use the intent and see what happens
         Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
@@ -376,7 +437,7 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
 
         this.imageUri = new CordovaUri(FileProvider.getUriForFile(cordova.getActivity(),
                 applicationId + ".camera.provider",
-                photo));
+                photo), photo);
 
         intent.putExtra(android.provider.MediaStore.EXTRA_OUTPUT, imageUri.getCorrectUri());
         // We can write to this URI, this will hopefully allow us to write files to get
@@ -392,6 +453,7 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
                 this.cordova.startActivityForResult((CordovaPlugin) this, intent, (CAMERA + 1) * 16 + returnType + 1);
             } else {
                 LOG.d(LOG_TAG, "Error: You don't have a default camera.  Your device may not be CTS complaint.");
+                this.failPicture("No camera available.");
             }
         }
         // else
@@ -516,11 +578,18 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
                 cropIntent.putExtra("aspectY", 1);
             }
             // create new file handle to get full resolution crop
-            croppedUri = Uri.fromFile(createCaptureFile(this.encodingType, System.currentTimeMillis() + ""));
+            File cropFile = createCaptureFile(this.encodingType, System.currentTimeMillis() + "");
+            croppedUri = Uri.fromFile(cropFile);
+
+            // the crop app can't write to a file URI in our cache directory
+            Uri cropOutput = FileProvider.getUriForFile(cordova.getActivity(),
+                    applicationId + ".camera.provider",
+                    cropFile);
 
             cropIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
             cropIntent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
-            cropIntent.putExtra("output", croppedUri);
+            cropIntent.setClipData(ClipData.newRawUri("output", cropOutput));
+            cropIntent.putExtra("output", cropOutput);
 
             // start the activity - we handle returning in onActivityResult
 
@@ -530,13 +599,141 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
             }
         } catch (ActivityNotFoundException anfe) {
             Log.e(LOG_TAG, "Crop operation not supported on this device");
+            processCameraResultInBackground(destType, cameraIntent);
+        }
+    }
+
+    /**
+     * Gets the device's location, waiting a few seconds if there isn't a recent one.
+     * Blocks, don't call on the main thread.
+     *
+     * @return the location, or null if not available or permission wasn't granted
+     */
+    private Location getCurrentLocation() {
+        if (!PermissionHelper.hasPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+                && !PermissionHelper.hasPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION)) {
+            return null;
+        }
+
+        LocationManager locationManager = (LocationManager) cordova.getActivity().getSystemService(Context.LOCATION_SERVICE);
+        if (locationManager == null) {
+            return null;
+        }
+
+        List<String> providers = locationManager.getProviders(true);
+        Location latest = null;
+        for (String provider : providers) {
             try {
-                processResultFromCamera(destType, cameraIntent);
-            } catch (IOException e) {
-                e.printStackTrace();
-                Log.e(LOG_TAG, "Unable to write to file");
+                Location known = locationManager.getLastKnownLocation(provider);
+                if (known != null && (latest == null || known.getTime() > latest.getTime())) {
+                    latest = known;
+                }
+            } catch (SecurityException | IllegalArgumentException e) {
+                Log.d(LOG_TAG, "Unable to read provider " + provider + ": " + e.getMessage());
             }
         }
+        if (latest != null && System.currentTimeMillis() - latest.getTime() < LOCATION_MAX_AGE) {
+            return latest;
+        }
+
+        final CountDownLatch received = new CountDownLatch(1);
+        final Location[] result = new Location[1];
+
+        // all of the methods are implemented, they don't have default implementations before API 30
+        LocationListener listener = new LocationListener() {
+            @Override
+            public void onLocationChanged(Location location) {
+                if (received.getCount() > 0) {
+                    result[0] = location;
+                    received.countDown();
+                }
+            }
+
+            @Override
+            public void onStatusChanged(String provider, int status, Bundle extras) {
+            }
+
+            @Override
+            public void onProviderEnabled(String provider) {
+            }
+
+            @Override
+            public void onProviderDisabled(String provider) {
+            }
+        };
+
+        for (String provider : providers) {
+            if (LocationManager.PASSIVE_PROVIDER.equals(provider)) {
+                continue;
+            }
+            try {
+                locationManager.requestLocationUpdates(provider, 0, 0, listener, Looper.getMainLooper());
+            } catch (SecurityException | IllegalArgumentException e) {
+                Log.d(LOG_TAG, "Unable to use provider " + provider + ": " + e.getMessage());
+            }
+        }
+
+        try {
+            received.await(LOCATION_TIMEOUT, TimeUnit.MILLISECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        } finally {
+            locationManager.removeUpdates(listener);
+        }
+
+        return result[0];
+    }
+
+    /**
+     * Reads the exif data from a content or file URI. Library images have their
+     * location removed unless the original is requested, which needs ACCESS_MEDIA_LOCATION.
+     *
+     * @return the exif data, or null if the image can't be read
+     */
+    private ExifHelper readExifFromUri(Uri uri) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
+                && PermissionHelper.hasPermission(this, Manifest.permission.ACCESS_MEDIA_LOCATION)
+                && supportsRequireOriginal(uri)) {
+            try {
+                return readExifFromStream(MediaStore.setRequireOriginal(uri));
+            } catch (Exception e) {
+                Log.d(LOG_TAG, "Unable to read the original image: " + e.toString());
+            }
+        }
+
+        try {
+            return readExifFromStream(uri);
+        } catch (Exception e) {
+            Log.d(LOG_TAG, "Unable to read exif data: " + e.toString());
+            return null;
+        }
+    }
+
+    private ExifHelper readExifFromStream(Uri uri) throws IOException {
+        InputStream stream = cordova.getActivity().getContentResolver().openInputStream(uri);
+        if (stream == null) {
+            throw new FileNotFoundException(uri.toString());
+        }
+        try {
+            ExifHelper exif = new ExifHelper();
+            exif.createInStream(stream);
+            exif.readExifData();
+            return exif;
+        } finally {
+            stream.close();
+        }
+    }
+
+    // the photo picker's URIs use the MediaStore authority, but reject requests for the original.
+    // Other providers, including the media documents provider, don't support the request either.
+    private boolean supportsRequireOriginal(Uri uri) {
+        return MediaStore.AUTHORITY.equals(uri.getAuthority())
+                && !uri.toString().startsWith("content://media/picker");
+    }
+
+    // file paths can't be read without read permissions, return the granted URI instead
+    private String getReadableLocation(String realPath, String uriString) {
+        return (realPath != null && new File(realPath).canRead()) ? realPath : uriString;
     }
 
     /**
@@ -571,7 +768,7 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
      */
     private void processResultFromCamera(int destType, Intent intent) throws IOException {
         int rotate = 0;
-        String thisJson = "";
+        String thisJson = "{}";
 
         // Create an ExifHelper to save the exif data that is lost during compression
         ExifHelper exif = new ExifHelper();
@@ -585,6 +782,17 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
                 exif.createInFile(sourcePath);
                 exif.readExifData();
                 rotate = exif.getOrientation();
+
+                // not all camera apps add the location, get it ourselves
+                // write it to the source image so that it's in all copies made from it
+                if (!exif.hasLocation()) {
+                    Location location = getCurrentLocation();
+                    if (location != null) {
+                        exif.setLocation(location);
+                        exif.createOutFile(sourcePath);
+                        exif.writeExifData();
+                    }
+                }
 
                 // REM Modifications
 
@@ -625,7 +833,7 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
         if (destType == DATA_URL) {
             bitmap = getScaledAndRotatedBitmap(sourcePath);
 
-            if (bitmap == null) {
+            if (bitmap == null && intent != null && intent.getExtras() != null) {
                 // Try to get the bitmap from intent.
                 bitmap = (Bitmap) intent.getExtras().get("data");
             }
@@ -669,8 +877,7 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
                     Uri uri = Uri.fromFile(createCaptureFile(this.encodingType, System.currentTimeMillis() + ""));
 
                     if (this.allowEdit && this.croppedUri != null) {
-                        Uri croppedUri = Uri.fromFile(new File(getFileNameFromUri(this.croppedUri)));
-                        writeUncompressedImage(croppedUri, uri);
+                        writeUncompressedImage(this.croppedUri, uri);
                     } else {
                         Uri imageUri = this.imageUri.getFileUri();
                         writeUncompressedImage(imageUri, uri);
@@ -707,7 +914,7 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
 
                     // We just finished rotating it by an arbitrary orientation, just make sure it's
                     // normal
-                    if (rotate != ExifInterface.ORIENTATION_NORMAL) {
+                    if (this.correctOrientation && this.orientationCorrected) {
                         exif.resetOrientation();
                     }
                     exif.createOutFile(exifPath);
@@ -760,7 +967,7 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
         return "";
     }
 
-    private String ouputModifiedBitmap(Bitmap bitmap, Uri uri) throws IOException {
+    private String ouputModifiedBitmap(Bitmap bitmap, Uri uri, ExifHelper exif) throws IOException {
         // Some content: URIs do not map to file paths (e.g. picasa).
         String realPath = FileHelper.getRealPath(uri, this.cordova);
 
@@ -776,13 +983,9 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
         bitmap.compress(compressFormat, this.mQuality, os);
         os.close();
 
-        if (realPath != null && this.encodingType == JPEG) {
-            // Create an ExifHelper to save the exif data that is lost during compression
-            ExifHelper exif = new ExifHelper();
-
+        if (exif != null && this.encodingType == JPEG) {
+            // save the exif data that is lost during compression
             try {
-                exif.createInFile(realPath);
-                exif.readExifData();
                 if (this.correctOrientation && this.orientationCorrected) {
                     exif.resetOrientation();
                 }
@@ -814,10 +1017,9 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
             }
         }
 
-        int rotate = 0;
-        String thisJson = "";
+        String thisJson = "{}";
         String jsonResult = "";
-        String jsonError = "{ \"error\": \"Unable to read exif data from remote URI\" }";
+        String jsonError = "{ \"error\": \"Unable to read exif data from URI\" }";
         JsonResultObj resultObj = new JsonResultObj();
 
         Gson thisGson = new GsonBuilder()
@@ -831,61 +1033,25 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
         String uriString = uri.toString();
         String mimeType = FileHelper.getMimeType(uriString, this.cordova);
 
+        // read exif data, this also works for cloud images as it doesn't need a file path
+        boolean isImage = this.mediaType != VIDEO && mimeType != null && mimeType.startsWith("image/");
+        ExifHelper exif = isImage ? readExifFromUri(uri) : null;
+        if (isImage) {
+            thisJson = exif != null ? thisGson.toJson(exif) : jsonError;
+        }
+
         // If you ask for video or the selected file doesn't have JPEG or PNG mime type
         // there will be no attempt to resize any returned data
         if (this.mediaType == VIDEO
                 || !(JPEG_MIME_TYPE.equalsIgnoreCase(mimeType) || PNG_MIME_TYPE.equalsIgnoreCase(mimeType))) {
 
-            resultObj.filename = fileLocation;
-            resultObj.json_metadata = "{}";
+            resultObj.filename = getReadableLocation(fileLocation, uriString);
+            resultObj.json_metadata = thisJson;
 
             jsonResult = thisGson.toJson(resultObj);
             // success callback
             this.callbackContext.success(jsonResult);
         } else {
-
-            // rem mods
-            // read exif data if URI is not remote
-
-            Uri exifUri = uri;
-            String thisUri = uri.toString();
-            Boolean cloudImageUri = false;
-
-            // identify cloud photos ( there may be more!) , no exif processing
-            if (thisUri.contains("content://com.google") ||
-                    (thisUri.contains("content://com.microsoft")) ||
-                    (thisUri.contains("content://com.dropbox"))) {
-                thisJson = jsonError;
-                cloudImageUri = true;
-            } else {
-
-                // required to support exifhelper
-                exifUri = Uri.fromFile(new File(FileHelper.getRealPath(uri, this.cordova)));
-                String thisFile = FileHelper.stripFileProtocol(exifUri.toString());
-
-                // thisFile will be a null string or '/' if the file is remote
-                // can't extract exif data from cloud files
-
-                if (thisFile.length() > 7) {
-                    ExifHelper exif = new ExifHelper();
-                    try {
-                        exif.createInFile(thisFile);
-                        exif.readExifData();
-
-                        // get orientation
-                        // rotate = exif.getOrientation();
-
-                        // Convert exif to JSON
-                        thisJson = thisGson.toJson(exif);
-
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-
-                } else {
-                    thisJson = jsonError;
-                }
-            }
 
             // This is a special case so just return the path as no scaling,
             // rotating, nor compressing needs to be done
@@ -925,7 +1091,7 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
                     if ((this.targetHeight > 0 && this.targetWidth > 0) ||
                             (this.correctOrientation && this.orientationCorrected)) {
                         try {
-                            String modifiedPath = this.ouputModifiedBitmap(bitmap, uri);
+                            String modifiedPath = this.ouputModifiedBitmap(bitmap, uri, exif);
 
                             // The modified image is cached by the app in order to get around this and not
                             // have to delete you
@@ -933,13 +1099,6 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
                             // url.
 
                             fileLocation = "file://" + modifiedPath + "?" + System.currentTimeMillis();
-
-                            // Note: For external files, content://, exif data will be missing, limitation
-                            // of android.media.ExifInterface, can't handle streams
-                            // Need to use another library and can't use content:// URI's
-                            // You don't find file paths from content URI's
-                            // See:
-                            // http://stackoverflow.com/questions/34696787/a-final-answer-on-how-to-get-exif-data-from-uri
 
                             resultObj.filename = fileLocation;
                             resultObj.json_metadata = thisJson;
@@ -954,16 +1113,7 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
                         }
                     } else {
 
-                        if (cloudImageUri) {
-                            // image selected from Google Drive, Skydrive, Dropbox and temp file creation
-                            // failed in getScaledAndRotatedBitmap
-                            // this should not happen
-
-                            Log.d(LOG_TAG, "Processing cloud image URI ");
-                            resultObj.filename = uri.toString();
-                        } else {
-                            resultObj.filename = fileLocation;
-                        }
+                        resultObj.filename = getReadableLocation(fileLocation, uriString);
                         resultObj.json_metadata = thisJson;
 
                         jsonResult = thisGson.toJson(resultObj);
@@ -1005,12 +1155,7 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
                 // allow us
                 // to pass arcane codes back.
                 destType = requestCode - CROP_CAMERA;
-                try {
-                    processResultFromCamera(destType, intent);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                    Log.e(LOG_TAG, "Unable to write to file");
-                }
+                processCameraResultInBackground(destType, intent);
 
             } // If cancelled
             else if (resultCode == Activity.RESULT_CANCELED) {
@@ -1026,18 +1171,13 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
         else if (srcType == CAMERA) {
             // If image available
             if (resultCode == Activity.RESULT_OK) {
-                try {
-                    if (this.allowEdit) {
-                        Uri tmpFile = FileProvider.getUriForFile(cordova.getActivity(),
-                                applicationId + ".camera.provider",
-                                createCaptureFile(this.encodingType));
-                        performCrop(tmpFile, destType, intent);
-                    } else {
-                        this.processResultFromCamera(destType, intent);
-                    }
-                } catch (IOException e) {
-                    e.printStackTrace();
-                    this.failPicture("Error capturing image.");
+                if (this.allowEdit) {
+                    Uri tmpFile = FileProvider.getUriForFile(cordova.getActivity(),
+                            applicationId + ".camera.provider",
+                            createCaptureFile(this.encodingType));
+                    performCrop(tmpFile, destType, intent);
+                } else {
+                    processCameraResultInBackground(destType, intent);
                 }
             }
 
@@ -1058,7 +1198,12 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
                 final int finalDestType = destType;
                 cordova.getThreadPool().execute(new Runnable() {
                     public void run() {
-                        processResultFromGallery(finalDestType, i);
+                        try {
+                            processResultFromGallery(finalDestType, i);
+                        } catch (RuntimeException | OutOfMemoryError e) {
+                            Log.e(LOG_TAG, "Error retrieving image", e);
+                            failPicture("Error retrieving image.");
+                        }
                     }
                 });
             } else if (resultCode == Activity.RESULT_CANCELED) {
@@ -1067,6 +1212,20 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
                 this.failPicture("Selection did not complete!");
             }
         }
+    }
+
+    // decoding images and getting the location are too slow for the main thread
+    private void processCameraResultInBackground(final int destType, final Intent intent) {
+        cordova.getThreadPool().execute(new Runnable() {
+            public void run() {
+                try {
+                    processResultFromCamera(destType, intent);
+                } catch (IOException | RuntimeException | OutOfMemoryError e) {
+                    Log.e(LOG_TAG, "Error capturing image", e);
+                    failPicture("Error capturing image.");
+                }
+            }
+        });
     }
 
     private int exifToDegrees(int exifOrientation) {
@@ -1202,7 +1361,7 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
                 // Generate a temporary file
                 String timeStamp = new SimpleDateFormat(TIME_FORMAT).format(new Date());
                 String fileName = "IMG_" + timeStamp + (this.encodingType == JPEG ? JPEG_EXTENSION : PNG_EXTENSION);
-                localFile = new File(getTempDirectoryPath() + fileName);
+                localFile = new File(getTempDirectoryPath(), fileName);
                 galleryUri = Uri.fromFile(localFile);
                 writeUncompressedImage(fileStream, galleryUri);
                 try {
@@ -1443,32 +1602,38 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
         int diff = 1;
         Uri contentStore = whichContentStore();
         Cursor cursor = queryImgDB(contentStore);
-        int currentNumOfImages = cursor.getCount();
-
-        if (type == FILE_URI && this.saveToPhotoAlbum) {
-            diff = 2;
+        if (cursor == null) {
+            return;
         }
 
-        // delete the duplicate file if the difference is 2 for file URI or 1 for Data
-        // URL
-        if ((currentNumOfImages - numPics) == diff) {
-            cursor.moveToLast();
-            @SuppressLint("Range")
-            int id = Integer.parseInt(cursor.getString(cursor.getColumnIndex(MediaStore.Images.Media._ID)));
-            if (diff == 2) {
-                id--;
-            }
-            Uri uri = Uri.parse(contentStore + "/" + id);
-            // Note: 08-31-22 works around a permission problem when deleting duplicate
-            // images
-            // For more information and other approaches refer to apache#679
-            try {
-                this.cordova.getActivity().getContentResolver().delete(uri, null, null);
-            } catch (SecurityException e) {
-                Log.d(LOG_TAG,
-                        "Handled security error while trying to delete duplicate image. Probable cause is missing permissions");
+        try {
+            int currentNumOfImages = cursor.getCount();
+
+            if (type == FILE_URI && this.saveToPhotoAlbum) {
+                diff = 2;
             }
 
+            // delete the duplicate file if the difference is 2 for file URI or 1 for Data
+            // URL
+            if ((currentNumOfImages - numPics) == diff) {
+                cursor.moveToLast();
+                @SuppressLint("Range")
+                int id = Integer.parseInt(cursor.getString(cursor.getColumnIndex(MediaStore.Images.Media._ID)));
+                if (diff == 2) {
+                    id--;
+                }
+                Uri uri = Uri.parse(contentStore + "/" + id);
+                // Note: 08-31-22 works around a permission problem when deleting duplicate
+                // images
+                // For more information and other approaches refer to apache#679
+                try {
+                    this.cordova.getActivity().getContentResolver().delete(uri, null, null);
+                } catch (SecurityException e) {
+                    Log.d(LOG_TAG,
+                            "Handled security error while trying to delete duplicate image. Probable cause is missing permissions");
+                }
+            }
+        } finally {
             cursor.close();
         }
     }
@@ -1563,8 +1728,15 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
 
     public void onRequestPermissionResult(int requestCode, String[] permissions,
                                           int[] grantResults) {
-        for (int r : grantResults) {
-            if (r == PackageManager.PERMISSION_DENIED) {
+        // no results means that the request was interrupted
+        if (grantResults.length == 0) {
+            this.callbackContext.sendPluginResult(new PluginResult(PluginResult.Status.ERROR, PERMISSION_DENIED_ERROR));
+            return;
+        }
+
+        // the image can still be returned without the location
+        for (int i = 0; i < grantResults.length; i++) {
+            if (grantResults[i] == PackageManager.PERMISSION_DENIED && !isLocationPermission(permissions[i])) {
                 this.callbackContext.sendPluginResult(new PluginResult(PluginResult.Status.ERROR, PERMISSION_DENIED_ERROR));
                 return;
             }
@@ -1635,31 +1807,6 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
         }
 
         this.callbackContext = callbackContext;
-    }
-
-    /*
-     * This is dirty, but it does the job.
-     *
-     * Since the FilesProvider doesn't really provide you a way of getting a URL
-     * from the file,
-     * and since we actually need the Camera to create the file for us most of the
-     * time, we don't
-     * actually write the file, just generate the location based on a timestamp, we
-     * need to get it
-     * back from the Intent.
-     *
-     * However, the FilesProvider preserves the path, so we can at least write to it
-     * from here, since
-     * we own the context in this case.
-     */
-
-    private String getFileNameFromUri(Uri uri) {
-        String fullUri = uri.toString();
-        String partial_path = fullUri.split("external_files")[1];
-        File external_storage = Environment.getExternalStorageDirectory();
-        String path = external_storage.getAbsolutePath() + partial_path;
-        return path;
-
     }
 
     private boolean hasPermissions(String[] permissions) {

@@ -10,7 +10,9 @@ This plugin is tightly integrated within the [Alpha Anywhere](http://www.alphaso
 
 ## Required Cordova Versions
 
-This version (1.5.5) does not request Android read permissions : EXPERIMENTAL
+Version 1.6.0 does not request Android read permissions on Android 13 or later. To include GPS data, it requests camera location permission when taking a photo, and media location access when choosing an image. On Android this appears as a request to access photos and videos. If these are denied, the image is still returned, without the location. On Android 13 or later, the returned filename can be a content:// URI instead of a file path.
+
+Version 1.6.0 has been built and tested with cordova-android 15.
 
 Version 1.5.3 includes changes for Android only that require Cordova 12, Cordova Android 12 and require you to use API level 33.
 
