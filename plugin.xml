@@ -3,7 +3,7 @@
 <plugin xmlns="http://apache.org/cordova/ns/plugins/1.0"
     xmlns:android="http://schemas.android.com/apk/res/android"
     id="cordova-plugin-camera-with-exif"
-    version="1.5.5">
+    version="1.5.6">
 
     <name>cordova-plugin-camera-with-exif</name>
     <description>
@@ -123,7 +123,7 @@
             <framework src="ImageIO.framework" weak="true" />
             <framework src="CoreLocation.framework" />
             <framework src="CoreGraphics.framework" />
-            <framework src="AssetsLibrary.framework" />
+            <framework src="Photos.framework" />
             <framework src="MobileCoreServices.framework" />
             <framework src="CoreGraphics.framework" />
             <framework src="CoreImage.framework" />
@@ -135,6 +135,10 @@
 
             <config-file target="*-Info.plist" parent="NSPhotoLibraryUsageDescription">
                 <string>This app requires access to the photo library to display images.</string>
+            </config-file>
+
+            <config-file target="*-Info.plist" parent="NSPhotoLibraryAddUsageDescription">
+                <string>This app requires access to the photo library to save photos.</string>
             </config-file>
 
             <config-file target="*-Info.plist" parent="NSLocationWhenInUseUsageDescription">

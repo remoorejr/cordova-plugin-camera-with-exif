@@ -108,7 +108,7 @@ typedef NSUInteger CDVMediaType;
 - (void)imagePickerControllerDidCancel:(UIImagePickerController*)picker;
 - (void)navigationController:(UINavigationController *)navigationController willShowViewController:(UIViewController *)viewController animated:(BOOL)animated;
 
-- (void)locationManager:(CLLocationManager*)manager didUpdateToLocation:(CLLocation*)newLocation fromLocation:(CLLocation*)oldLocation;
+- (void)locationManager:(CLLocationManager*)manager didUpdateLocations:(NSArray<CLLocation*>*)locations;
 - (void)locationManager:(CLLocationManager *)manager didFailWithError:(NSError *)error;
 
 @end

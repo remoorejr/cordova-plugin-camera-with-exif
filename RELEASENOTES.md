@@ -21,6 +21,21 @@
 
 # Release Notes
 
+### 1.5.6 (November 4, 2026)
+
+- bump version
+- iOS: fix crashes when converting image metadata to JSON, values that can't be converted are now dropped
+- iOS: fix writing EXIF data into an immutable buffer, image orientation is now retained
+- iOS: create the image picker on the main thread
+- iOS: replace AssetsLibrary with the Photos framework, it can't be built with the iOS 26 or later SDK
+- iOS: fix saving camera images to the photo album, add NSPhotoLibraryAddUsageDescription
+- iOS: replace UIAlertView, openURL: and the deprecated location update callback
+- iOS: photo library permission is now requested before the picker is shown
+- iOS: camera no longer opens when camera permission has been denied
+- iOS: base64 camera results now wait for the location lookup and include the metadata
+- iOS: return a result for the Saved Photos Album source
+- iOS 13 or later is required
+
 ### 1.5.3 (September 12, 2023)
 - bump version
 - simplify and fix permission request code to call camera or get image after initial permission is granted

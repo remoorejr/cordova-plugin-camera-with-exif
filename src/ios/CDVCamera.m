@@ -26,8 +26,7 @@
 #import "CDVJpegHeaderWriter.h"
 #import "UIImage+CropScaleOrientation.h"
 #import <ImageIO/CGImageProperties.h>
-#import <AssetsLibrary/ALAssetRepresentation.h>
-#import <AssetsLibrary/AssetsLibrary.h> 
+#import <Photos/Photos.h>
 #import <AVFoundation/AVFoundation.h>
 #import <ImageIO/CGImageSource.h>
 #import <ImageIO/CGImageProperties.h>
@@ -69,6 +68,51 @@ static NSString* toBase64(NSData* data) {
     } else {
         return nil;
     }
+}
+
+// 11-04-2026: NSJSONSerialization throws on values JSON can't represent (NSData, NaN, etc), which crashes the app.
+// Image metadata content varies by iOS version and device, so only keep the values that can be converted.
+static id jsonSafeValue(id value) {
+    if ([value isKindOfClass:[NSString class]]) {
+        return value;
+    }
+    if ([value isKindOfClass:[NSNumber class]]) {
+        double number = [value doubleValue];
+        return (isnan(number) || isinf(number)) ? nil : value;
+    }
+    if ([value isKindOfClass:[NSArray class]]) {
+        NSMutableArray* safeArray = [NSMutableArray array];
+        for (id item in value) {
+            id safeItem = jsonSafeValue(item);
+            if (safeItem) {
+                [safeArray addObject:safeItem];
+            }
+        }
+        return safeArray;
+    }
+    if ([value isKindOfClass:[NSDictionary class]]) {
+        NSMutableDictionary* safeDictionary = [NSMutableDictionary dictionary];
+        for (id key in value) {
+            id safeItem = jsonSafeValue([value objectForKey:key]);
+            if (safeItem && [key isKindOfClass:[NSString class]]) {
+                [safeDictionary setObject:safeItem forKey:key];
+            }
+        }
+        return safeDictionary;
+    }
+    return nil;
+}
+
+static NSString* metadataToJSON(NSDictionary* metadata) {
+    NSError* error = nil;
+    NSData* jsonData = [NSJSONSerialization dataWithJSONObject:(jsonSafeValue(metadata) ?: @{})
+                                                       options:kNilOptions
+                                                         error:&error];
+    if (!jsonData) {
+        NSLog(@"Error converting to JSON: %@", error);
+        return @"{}";
+    }
+    return [[NSString alloc] initWithData:jsonData encoding:NSUTF8StringEncoding];
 }
 
 
@@ -175,76 +219,93 @@ static NSString* toBase64(NSData* data) {
         }
 
         // Validate the app has permission to access the camera
-        if (pictureOptions.sourceType == UIImagePickerControllerSourceTypeCamera && [AVCaptureDevice respondsToSelector:@selector(authorizationStatusForMediaType:)]) {
+        if (pictureOptions.sourceType == UIImagePickerControllerSourceTypeCamera) {
             AVAuthorizationStatus authStatus = [AVCaptureDevice authorizationStatusForMediaType:AVMediaTypeVideo];
             if (authStatus == AVAuthorizationStatusDenied ||
                 authStatus == AVAuthorizationStatusRestricted) {
-                // If iOS 8+, offer a link to the Settings app
-                NSString* settingsButton = (&UIApplicationOpenSettingsURLString != NULL)
-                    ? NSLocalizedString(@"Settings", nil)
-                    : nil;
-
-                // Denied; show an alert
-                dispatch_async(dispatch_get_main_queue(), ^{
-                    [[[UIAlertView alloc] initWithTitle:[[NSBundle mainBundle]
-                                                         objectForInfoDictionaryKey:@"CFBundleDisplayName"]
-                                                message:NSLocalizedString(@"Access to the camera has been prohibited; please enable it in the Settings app to continue.", nil)
-                                               delegate:self
-                                      cancelButtonTitle:NSLocalizedString(@"OK", nil)
-                                      otherButtonTitles:settingsButton, nil] show];
-                });
+                [weakSelf presentCameraPermissionAlert:command.callbackId];
+                return;
             }
+        } else if (pictureOptions.usesGeolocation) {
+            // The picker only returns a PHAsset, needed to read the image's exif data, if access was granted before it was shown.
+            // If access is denied the image is still returned, without the metadata.
+            [PHPhotoLibrary requestAuthorization:^(PHAuthorizationStatus status) {
+                [weakSelf showPicker:pictureOptions command:command];
+            }];
+            return;
+        }
+
+        [weakSelf showPicker:pictureOptions command:command];
+    }];
+}
+
+- (void)showPicker:(CDVPictureOptions*)pictureOptions command:(CDVInvokedUrlCommand*)command
+{
+    __weak CDVCamera* weakSelf = self;
+
+    // Perform UI operations on the main thread
+    // 11-04-2026: this now includes creating the picker, UIKit objects can't be created on a background thread
+    dispatch_async(dispatch_get_main_queue(), ^{
+        // If a popover is already open, close it; we only want one at a time.
+        if (([[weakSelf pickerController] pickerPopoverController] != nil) && [[[weakSelf pickerController] pickerPopoverController] isPopoverVisible]) {
+            [[[weakSelf pickerController] pickerPopoverController] dismissPopoverAnimated:YES];
+            [[[weakSelf pickerController] pickerPopoverController] setDelegate:nil];
+            [[weakSelf pickerController] setPickerPopoverController:nil];
         }
 
         CDVCameraPicker* cameraPicker = [CDVCameraPicker createFromPictureOptions:pictureOptions];
         weakSelf.pickerController = cameraPicker;
-        
+
         cameraPicker.delegate = weakSelf;
         cameraPicker.callbackId = command.callbackId;
         // we need to capture this state for memory warnings that dealloc this object
         cameraPicker.webView = weakSelf.webView;
-        
-        // Perform UI operations on the main thread
-        dispatch_async(dispatch_get_main_queue(), ^{
-            // If a popover is already open, close it; we only want one at a time.
-            if (([[weakSelf pickerController] pickerPopoverController] != nil) && [[[weakSelf pickerController] pickerPopoverController] isPopoverVisible]) {
-                [[[weakSelf pickerController] pickerPopoverController] dismissPopoverAnimated:YES];
-                [[[weakSelf pickerController] pickerPopoverController] setDelegate:nil];
-                [[weakSelf pickerController] setPickerPopoverController:nil];
-            }
 
-            if ([weakSelf popoverSupported] && (pictureOptions.sourceType != UIImagePickerControllerSourceTypeCamera)) {
-                if (cameraPicker.pickerPopoverController == nil) {
-                    cameraPicker.pickerPopoverController = [[NSClassFromString(@"UIPopoverController") alloc] initWithContentViewController:cameraPicker];
-                }
-                [weakSelf displayPopover:pictureOptions.popoverOptions];
-                weakSelf.hasPendingOperation = NO;
-            } else {
-                [weakSelf.viewController presentViewController:cameraPicker animated:YES completion:^{
-                    weakSelf.hasPendingOperation = NO;
-                }];
+        if ([weakSelf popoverSupported] && (pictureOptions.sourceType != UIImagePickerControllerSourceTypeCamera)) {
+            if (cameraPicker.pickerPopoverController == nil) {
+                cameraPicker.pickerPopoverController = [[NSClassFromString(@"UIPopoverController") alloc] initWithContentViewController:cameraPicker];
             }
-        });
-    }];
+            [weakSelf displayPopover:pictureOptions.popoverOptions];
+            weakSelf.hasPendingOperation = NO;
+        } else {
+            [weakSelf.viewController presentViewController:cameraPicker animated:YES completion:^{
+                weakSelf.hasPendingOperation = NO;
+            }];
+        }
+    });
 }
 
-// Delegate for camera permission UIAlertView
-- (void)alertView:(UIAlertView *)alertView clickedButtonAtIndex:(NSInteger)buttonIndex
+// Camera permission denied, offer a link to the Settings app
+- (void)presentCameraPermissionAlert:(NSString*)callbackId
 {
-    // If Settings button (on iOS 8), open the settings app
-    if (buttonIndex == 1) {
-        [[UIApplication sharedApplication] openURL:[NSURL URLWithString:UIApplicationOpenSettingsURLString]];
-    }
+    __weak CDVCamera* weakSelf = self;
 
-    // Dismiss the view
-    [[self.pickerController presentingViewController] dismissViewControllerAnimated:YES completion:nil];
+    void (^sendDeniedResult)(void) = ^{
+        CDVPluginResult* result = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Permission to access camera denied."];   // error callback expects string ATM
+        [weakSelf.commandDelegate sendPluginResult:result callbackId:callbackId];
+        weakSelf.hasPendingOperation = NO;
+    };
 
-    CDVPluginResult* result = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Permission to access camera denied."];   // error callback expects string ATM
+    dispatch_async(dispatch_get_main_queue(), ^{
+        UIAlertController* alert = [UIAlertController alertControllerWithTitle:[[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleDisplayName"]
+                                                                       message:NSLocalizedString(@"Access to the camera has been prohibited; please enable it in the Settings app to continue.", nil)
+                                                                preferredStyle:UIAlertControllerStyleAlert];
 
-    [self.commandDelegate sendPluginResult:result callbackId:self.pickerController.callbackId];
+        [alert addAction:[UIAlertAction actionWithTitle:NSLocalizedString(@"OK", nil)
+                                                  style:UIAlertActionStyleDefault
+                                                handler:^(UIAlertAction* action) {
+            sendDeniedResult();
+        }]];
 
-    self.hasPendingOperation = NO;
-    self.pickerController = nil;
+        [alert addAction:[UIAlertAction actionWithTitle:NSLocalizedString(@"Settings", nil)
+                                                  style:UIAlertActionStyleDefault
+                                                handler:^(UIAlertAction* action) {
+            [[UIApplication sharedApplication] openURL:[NSURL URLWithString:UIApplicationOpenSettingsURLString] options:@{} completionHandler:nil];
+            sendDeniedResult();
+        }]];
+
+        [weakSelf.viewController presentViewController:alert animated:YES completion:nil];
+    });
 }
 
 - (void)repositionPopover:(CDVInvokedUrlCommand*)command
@@ -389,14 +450,12 @@ static NSString* toBase64(NSData* data) {
                             [self.metadata setObject:EXIFDictionary forKey:(NSString*)kCGImagePropertyExifDictionary];
                         }
                         
-                        if (IsAtLeastiOSVersion(@"8.0")) {
-                            [[self locationManager] performSelector:NSSelectorFromString(@"requestWhenInUseAuthorization") withObject:nil afterDelay:0];
-                        }
+                        [[self locationManager] requestWhenInUseAuthorization];
                         [[self locationManager] startUpdatingLocation];
                         
                     } else {
                     
-                        // image was selected from library, resultForImage will extract exif data from library image source and add to image source with ALAssetsLibrary
+                        // image was selected from library, resultForImage will extract exif data from library image source and add to image source
                         // imagePicker strips all metadata on select
                         
                         self.data = data;
@@ -432,6 +491,85 @@ static NSString* toBase64(NSData* data) {
     } while ([fileMgr fileExistsAtPath:filePath]);
     
     return filePath;
+}
+
+// 11-04-2026: writes to a new buffer. The destination must be mutable, writing into the immutable
+// NSData returned by UIImageJPEGRepresentation is invalid. Adding from the source also keeps the image orientation.
+- (NSData*)imageData:(NSData*)imageData addingMetadata:(NSDictionary*)metadata
+{
+    CGImageSourceRef sourceImage = CGImageSourceCreateWithData((__bridge CFDataRef)imageData, NULL);
+    if (sourceImage == NULL) {
+        return imageData;
+    }
+
+    NSMutableData* outputData = [NSMutableData data];
+    CGImageDestinationRef destinationImage = CGImageDestinationCreateWithData((__bridge CFMutableDataRef)outputData, CGImageSourceGetType(sourceImage), 1, NULL);
+    if (destinationImage == NULL) {
+        CFRelease(sourceImage);
+        return imageData;
+    }
+
+    CGImageDestinationAddImageFromSource(destinationImage, sourceImage, 0, (__bridge CFDictionaryRef)metadata);
+    BOOL ok = CGImageDestinationFinalize(destinationImage);
+
+    CFRelease(sourceImage);
+    CFRelease(destinationImage);
+
+    #ifdef __REM_CoreImage__
+
+    if (ok) {
+        CIImage *testImage = [CIImage imageWithData:outputData];
+        NSDictionary *propDict = [testImage properties];
+        NSLog(@"Final properties %@", propDict);
+    }
+    #endif
+
+    return ok ? outputData : imageData;
+}
+
+// the imagePicker strips all metadata on select, get it from the original image in the photo library
+- (void)metadataForLibraryImage:(NSDictionary*)info completion:(void (^)(NSDictionary* metadata))completion
+{
+    PHAsset* asset = [info objectForKey:UIImagePickerControllerPHAsset];
+    if (asset == nil) {
+        completion(nil);
+        return;
+    }
+
+    PHImageRequestOptions* requestOptions = [[PHImageRequestOptions alloc] init];
+    requestOptions.networkAccessAllowed = YES;
+    requestOptions.deliveryMode = PHImageRequestOptionsDeliveryModeHighQualityFormat;
+
+    [[PHImageManager defaultManager] requestImageDataAndOrientationForAsset:asset
+                                                                    options:requestOptions
+                                                              resultHandler:^(NSData* imageData, NSString* dataUTI, CGImagePropertyOrientation orientation, NSDictionary* resultInfo) {
+        NSDictionary* metadata = nil;
+        if (imageData) {
+            CGImageSourceRef sourceImage = CGImageSourceCreateWithData((__bridge CFDataRef)imageData, NULL);
+            if (sourceImage) {
+                metadata = CFBridgingRelease(CGImageSourceCopyPropertiesAtIndex(sourceImage, 0, NULL));
+                CFRelease(sourceImage);
+            }
+        }
+        dispatch_async(dispatch_get_main_queue(), ^{
+            completion(metadata);
+        });
+    }];
+}
+
+- (void)saveImageDataToPhotoAlbum:(NSData*)imageData
+{
+    if (imageData == nil) {
+        return;
+    }
+
+    [[PHPhotoLibrary sharedPhotoLibrary] performChanges:^{
+        [[PHAssetCreationRequest creationRequestForAsset] addResourceWithType:PHAssetResourceTypePhoto data:imageData options:nil];
+    } completionHandler:^(BOOL success, NSError* error) {
+        if (!success) {
+            NSLog(@"Error saving image to photo album: %@", error);
+        }
+    }];
 }
 
 - (UIImage*)retrieveImage:(NSDictionary*)info options:(CDVPictureOptions*)options
@@ -502,109 +640,41 @@ static NSString* toBase64(NSData* data) {
                     }
                 }
                 
-                if ( options.usesGeolocation && options.sourceType == UIImagePickerControllerSourceTypePhotoLibrary)  {
+                if (options.usesGeolocation && options.sourceType != UIImagePickerControllerSourceTypeCamera) {
                     // get exif data, the code block is asynchronous
-                        NSURL *assetURL = [info objectForKey:UIImagePickerControllerReferenceURL];
- 
-                        ALAssetsLibrary *library = [[ALAssetsLibrary alloc] init];
-                        [library assetForURL:assetURL
-                                 resultBlock:^(ALAsset *asset)  {
-                         
-                            NSDictionary *metadata = asset.defaultRepresentation.metadata;
-                            
-                        
-                            self.metadata = [[NSMutableDictionary alloc] init];
-                            
-                            NSMutableDictionary *EXIFDictionary = [[metadata objectForKey:(NSString*)kCGImagePropertyExifDictionary]mutableCopy];
-                            if (EXIFDictionary) {
-                                [self.metadata setObject:EXIFDictionary forKey:(NSString*)kCGImagePropertyExifDictionary];
-                            }
-                            
-                            
-                            NSMutableDictionary *TIFFDictionary = [[metadata objectForKey:(NSString*)kCGImagePropertyTIFFDictionary]mutableCopy];
-                            if (TIFFDictionary) {
-                                // 05-04-2021: re; incorrect image orientation 
-                                // [self.metadata setObject:TIFFDictionary forKey:(NSString*)kCGImagePropertyTIFFDictionary];
-                                
-                                //remove orientation from exif data when image comes from photo library
-                                [[self.metadata valueForKey:(NSString*)kCGImagePropertyTIFFDictionary] removeObjectForKey:(NSString*)kCGImagePropertyTIFFOrientation];
+                    // 11-04-2026: replaced ALAssetsLibrary, it can't be built with the iOS 26 or later SDK
+                    [self metadataForLibraryImage:info completion:^(NSDictionary* metadata) {
 
-                            }
-                            
-                            
-                            NSMutableDictionary *GPSDictionary = [[metadata objectForKey:(NSString*)kCGImagePropertyGPSDictionary]mutableCopy];
-                            if (GPSDictionary)  {
-                                [self.metadata setObject:GPSDictionary forKey:(NSString*)kCGImagePropertyGPSDictionary];
-                            }
-                            
-                            
-                            /*
+                        self.metadata = [[NSMutableDictionary alloc] init];
 
-                            // this gets ALL image metadata, occasional errors converting this to JSON, so best to be selective
-                            self.metadata = [[NSMutableDictionary alloc] initWithDictionary:metadata];
-                            [self.metadata addEntriesFromDictionary:metadata];
-                            
-                            */
-                            
-                            NSError* error;
-                            NSString* jsonString = nil;
-                            bool ok;
-                        
-                            if (self.metadata){
-                            
-                                // add metadata to image that is written to temp file
-                                // iOS 13 fix applied 9-23-2019, re; vlinde fork
-                                // see: https://github.com/vlinde/cordova-plugin-camera-with-exif/blob/master/src/ios/CDVCamera.m
-                                CGImageRef imageRef = image.CGImage;
-                            
-                                CGImageSourceRef sourceImage = CGImageSourceCreateWithData((__bridge_retained CFDataRef)self.data, NULL);
-                                CFStringRef sourceType = CGImageSourceGetType(sourceImage);
-        
-                                CGImageDestinationRef destinationImage = CGImageDestinationCreateWithData((__bridge CFMutableDataRef)self.data, sourceType, 1, NULL);
-                                CGImageDestinationAddImage(destinationImage , imageRef, (CFDictionaryRef)self.metadata);
-        
-                                ok = CGImageDestinationFinalize(destinationImage);
-        
-                                #ifdef __REM_CoreImage__
-                                
-                                if (ok) {
-                                    CIImage *testImage = [CIImage imageWithData:self.data];
-                                    NSDictionary *propDict = [testImage properties];
-                                    NSLog(@"Image properties after adding metadata %@", propDict);
-                                }
-                                #endif
-                                
-                                CFRelease(sourceImage);
-                                CFRelease(destinationImage);
-                            
-                                
-                                NSData* jsonData = [NSJSONSerialization dataWithJSONObject:self.metadata
-                                                    options:0
-                                                    error:&error];
-                            
-                                if (!jsonData){
-                                    NSLog(@"Error converting to JSON: %@",error);
-                                    jsonString = @"{}";
-                                } else {
-                                    jsonString = [[NSString alloc] initWithData: jsonData encoding:NSUTF8StringEncoding];
-                                }
-                                
-                            } else {
-                                jsonString = @"{}";
-                            }
-                            
-                            NSMutableDictionary* thisResult = [[NSMutableDictionary alloc] init];
-                            [thisResult setObject:[[self urlTransformer:[NSURL fileURLWithPath:filePath]]absoluteString] forKey:@"filename"];
-                            [thisResult setObject: jsonString forKey:@"json_metadata"];
-                                     
-                            [self writeFile:filePath
-                                  imageData:data
-                                  includeThisExif:thisResult];
-                                     
+                        // being selective, occasional errors converting ALL image metadata to JSON
+                        NSMutableDictionary *EXIFDictionary = [[metadata objectForKey:(NSString*)kCGImagePropertyExifDictionary]mutableCopy];
+                        if (EXIFDictionary) {
+                            [self.metadata setObject:EXIFDictionary forKey:(NSString*)kCGImagePropertyExifDictionary];
                         }
-                        failureBlock:^(NSError *error) {
-                        }];
-                    
+
+                        NSMutableDictionary *GPSDictionary = [[metadata objectForKey:(NSString*)kCGImagePropertyGPSDictionary]mutableCopy];
+                        if (GPSDictionary)  {
+                            [self.metadata setObject:GPSDictionary forKey:(NSString*)kCGImagePropertyGPSDictionary];
+                        }
+
+                        // add metadata to image that is written to temp file
+                        data = [self imageData:data addingMetadata:self.metadata];
+
+                        NSMutableDictionary* thisResult = [[NSMutableDictionary alloc] init];
+                        [thisResult setObject:[[self urlTransformer:[NSURL fileURLWithPath:filePath]]absoluteString] forKey:@"filename"];
+                        [thisResult setObject:metadataToJSON(self.metadata) forKey:@"json_metadata"];
+
+                        [self writeFile:filePath
+                              imageData:data
+                              includeThisExif:thisResult];
+
+                        self.hasPendingOperation = NO;
+                        self.pickerController = nil;
+                        self.data = nil;
+                        self.metadata = nil;
+                    }];
+
                 }
             }
             break;
@@ -615,7 +685,8 @@ static NSString* toBase64(NSData* data) {
             image = [self retrieveImage:info options:options];
             NSData* data = [self processImage:image info:info options:options];
             
-            if (data)  {
+            // self.metadata is set when waiting on location, imagePickerControllerReturnImageResult returns the camera image
+            if (data && self.metadata == nil)  {
                 result = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:toBase64(data)];
             }
             break;
@@ -625,9 +696,9 @@ static NSString* toBase64(NSData* data) {
             break;
     };
     
-    if (saveToPhotoAlbum && image) {
-        ALAssetsLibrary* library = [ALAssetsLibrary new];
-        [library writeImageToSavedPhotosAlbum:image.CGImage orientation:(ALAssetOrientation)(image.imageOrientation) completionBlock:nil];
+    // when waiting on location, imagePickerControllerReturnImageResult saves the image with its metadata
+    if (saveToPhotoAlbum && image && self.metadata == nil) {
+        [self saveImageDataToPhotoAlbum:UIImageJPEGRepresentation(image, 1.0)];
     }
     
     return result;
@@ -745,9 +816,9 @@ static NSString* toBase64(NSData* data) {
     dispatch_block_t invoke = ^ (void) {
         CDVPluginResult* result;
 
-        if (picker.sourceType == UIImagePickerControllerSourceTypeCamera && [AVCaptureDevice authorizationStatusForMediaType:AVMediaTypeVideo] != ALAuthorizationStatusAuthorized) {
+        if (picker.sourceType == UIImagePickerControllerSourceTypeCamera && [AVCaptureDevice authorizationStatusForMediaType:AVMediaTypeVideo] != AVAuthorizationStatusAuthorized) {
             result = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Permission to access camera denied."];
-        } else if (picker.sourceType != UIImagePickerControllerSourceTypeCamera && [ALAssetsLibrary authorizationStatus] != ALAuthorizationStatusAuthorized) {
+        } else if (picker.sourceType != UIImagePickerControllerSourceTypeCamera && ([PHPhotoLibrary authorizationStatus] == PHAuthorizationStatusDenied || [PHPhotoLibrary authorizationStatus] == PHAuthorizationStatusRestricted)) {
             result = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Permission to access photo library denied."];
         } else {
             result = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"No image selected."];
@@ -775,12 +846,14 @@ static NSString* toBase64(NSData* data) {
     return locationManager;
 }
 
-- (void)locationManager:(CLLocationManager*)manager didUpdateToLocation:(CLLocation*)newLocation fromLocation:(CLLocation*)oldLocation
+- (void)locationManager:(CLLocationManager*)manager didUpdateLocations:(NSArray<CLLocation*>*)locations
 {
     if (locationManager == nil) {
         return;
     }
-    
+
+    CLLocation* newLocation = [locations lastObject];
+
     [self.locationManager stopUpdatingLocation];
     self.locationManager = nil;
     
@@ -852,43 +925,11 @@ static NSString* toBase64(NSData* data) {
     #pragma mark REM_Mods imagePickerControllerReturnImageResult
     // --- REM Mods --- //
     
-    BOOL ok = NO;
-    
     if (self.metadata) {
-        // iOS 13 fix applied 9-23-2019, re; vlinde fork
-        // see: https://github.com/vlinde/cordova-plugin-camera-with-exif/blob/master/src/ios/CDVCamera.m
-        UIImage *image = [UIImage imageWithData:self.data];
-        CGImageRef imageRef = image.CGImage;
-
-        //05-04-2021: iOS 14 fix, correctly append exif, See: https://github.com/apache/cordova-plugin-camera/pull/685 
-    
-        NSData* dataCopy = [self.data mutableCopy];
-        CGImageSourceRef sourceImage = CGImageSourceCreateWithData((__bridge CFDataRef)dataCopy, NULL);
-
-        CFStringRef sourceType = CGImageSourceGetType(sourceImage);
-        CGImageDestinationRef destinationImage = CGImageDestinationCreateWithData((__bridge CFMutableDataRef)self.data, sourceType, 1, NULL);
-        
-        CGImageDestinationAddImage(destinationImage, imageRef, (CFDictionaryRef)self.metadata);
-        
-        ok = CGImageDestinationFinalize(destinationImage);
-        
-        #ifdef __REM_CoreImage__
-        
-        if (ok) {
-            CIImage *testImage = [CIImage imageWithData:self.data];
-            NSDictionary *propDict = [testImage properties];
-            NSLog(@"Final properties %@", propDict);
-        }
-        #endif
-        
-        dataCopy = nil;
-        CFRelease(sourceImage);
-        CFRelease(destinationImage);
-        
-    
+        self.data = [self imageData:self.data addingMetadata:self.metadata];
     }
-    
-    
+
+
     switch (options.destinationType) {
         case DestinationTypeFileUri: {
             NSError *err = nil;
@@ -904,23 +945,10 @@ static NSString* toBase64(NSData* data) {
             
                 
                 // generate metadata JSON
-                NSError *error;
-                NSString *jsonString = nil;
-                NSData *jsonData = [NSJSONSerialization dataWithJSONObject:self.metadata
-                                                options:kNilOptions
-                                                error:&error];
-                
-                NSString *thisFileName = [[self urlTransformer:[NSURL fileURLWithPath:filePath]]absoluteString];
-                
-                if (!jsonData){
-                    NSLog(@"Error converting to JSON: %@",error);
-                    jsonString = @"{}";
+                NSString *jsonString = metadataToJSON(self.metadata);
 
-                } else {
-                    jsonString = [[NSString alloc] initWithData: jsonData encoding:NSUTF8StringEncoding];
-                }
-                
-                
+                NSString *thisFileName = [[self urlTransformer:[NSURL fileURLWithPath:filePath]]absoluteString];
+
                 NSLog(@"JSON -> %@\n\n", jsonString);
 
                 NSMutableDictionary* thisResult = [[NSMutableDictionary alloc] init];
@@ -988,15 +1016,14 @@ static NSString* toBase64(NSData* data) {
         [self.commandDelegate sendPluginResult:result callbackId:self.pickerController.callbackId];
     }
     
+    if (options.saveToPhotoAlbum) {
+        [self saveImageDataToPhotoAlbum:self.data];
+    }
+
     self.hasPendingOperation = NO;
     self.pickerController = nil;
     self.data = nil;
     self.metadata = nil;
-    
-    if (options.saveToPhotoAlbum) {
-        ALAssetsLibrary *library = [ALAssetsLibrary new];
-        [library writeImageDataToSavedPhotosAlbum:self.data metadata:self.metadata completionBlock:nil];
-    }
 }
 
 @end
